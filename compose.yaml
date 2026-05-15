@@ -1,0 +1,59 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  qsmart-webapp:
+    image: ${QSMART_WEBAPP_IMAGE?Variable not set}:${TAG:-latest}
+    container_name: ${STACK_NAME?Variable not set}
+    restart: always
+    stop_grace_period: 10s
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - traefik-public
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+
+      - traefik.http.services.${STACK_NAME?Variable not set}-webapp.loadbalancer.server.port=8080
+
+      - traefik.http.middlewares.${STACK_NAME?Variable not set}-https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.${STACK_NAME?Variable not set}-https-redirect.redirectscheme.permanent=true
+
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-http.rule=Host(`${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-http.entrypoints=http
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-http.middlewares=${STACK_NAME?Variable not set}-https-redirect
+
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-https.rule=Host(`${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-https.entrypoints=https
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-https.tls=true
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-https.tls.certresolver=le
+      - traefik.http.routers.${STACK_NAME?Variable not set}-webapp-https.priority=1
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+          pids: 256
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+networks:
+  traefik-public:
+    external: true

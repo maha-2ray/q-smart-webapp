@@ -1,0 +1,19 @@
+# Merge after compose.yaml: COMPOSE_FILE=compose.yaml:compose.traefik.yaml
+# Parity with API edge HSTS — see qsmart-backend documentation/spec-hsts-traefik-edge.md
+services:
+  qsmart-webapp:
+    labels:
+      - traefik.http.middlewares.${STACK_NAME?Variable not
+        set}-webapp-hsts.headers.stsSeconds=31536000
+      - traefik.http.middlewares.${STACK_NAME?Variable not
+        set}-webapp-hsts.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.${STACK_NAME?Variable not
+        set}-webapp-hsts.headers.stsPreload=true
+      - traefik.http.middlewares.${STACK_NAME?Variable not
+        set}-webapp-hsts.headers.customresponseheaders.Server=
+      - traefik.http.middlewares.${STACK_NAME?Variable not
+        set}-webapp-hsts.headers.customresponseheaders.X-Powered-By=
+
+      - traefik.http.routers.${STACK_NAME?Variable not
+        set}-webapp-https.middlewares=${STACK_NAME?Variable not
+        set}-webapp-hsts@docker

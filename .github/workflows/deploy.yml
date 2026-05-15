@@ -1,0 +1,278 @@
+name: Deploy / Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: |
+          Image tag. Dev: sha-… | Staging/prod after a Release: bare vX.Y.Z is accepted —
+          resolves to vX.Y.Z-staging or vX.Y.Z-production when those images exist. You may
+          also pass the full suffixed tag (e.g. v0.9.6-production).
+        required: true
+        type: string
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      reason:
+        description: Reason for deployment (optional)
+        required: false
+        type: string
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  validate:
+    name: Validate Image Exists
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      image-exists: ${{ steps.check.outputs.exists }}
+      image_tag: ${{ steps.check.outputs.image_tag }}
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if image exists
+        id: check
+        run: |
+          set -euo pipefail
+          ENV="${{ inputs.environment }}"
+          RAW="${{ inputs.version }}"
+          REPO_LC=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+
+          candidates=()
+          add() {
+            local c=$1 x
+            for x in "${candidates[@]}"; do
+              [[ "$x" == "$c" ]] && return 0
+            done
+            candidates+=("$c")
+          }
+
+          if [[ "$ENV" == "development" ]]; then
+            add "$RAW"
+            if [[ "$RAW" != v* && "$RAW" != latest && "$RAW" != sha-* ]]; then
+              add "v${RAW}"
+            fi
+          elif [[ "$ENV" == "staging" ]]; then
+            if [[ "$RAW" == *-staging || "$RAW" == sha-* || "$RAW" == latest ]]; then
+              add "$RAW"
+            fi
+            if [[ "$RAW" != *-staging && "$RAW" != sha-* && "$RAW" != latest ]]; then
+              add "${RAW}-staging"
+              [[ "$RAW" != v* ]] && add "v${RAW}-staging"
+              add "$RAW"
+              [[ "$RAW" != v* ]] && add "v${RAW}"
+            fi
+          elif [[ "$ENV" == "production" ]]; then
+            if [[ "$RAW" == *-production || "$RAW" == sha-* || "$RAW" == latest ]]; then
+              add "$RAW"
+            fi
+            if [[ "$RAW" != *-production && "$RAW" != sha-* && "$RAW" != latest ]]; then
+              add "${RAW}-production"
+              [[ "$RAW" != v* ]] && add "v${RAW}-production"
+              add "$RAW"
+              [[ "$RAW" != v* ]] && add "v${RAW}"
+            fi
+          fi
+
+          RESOLVED=""
+          for t in "${candidates[@]}"; do
+            if docker manifest inspect "${REPO_LC}:${t}" > /dev/null 2>&1; then
+              RESOLVED="$t"
+              break
+            fi
+          done
+
+          if [[ -z "$RESOLVED" ]]; then
+            echo "Image not found for environment=${ENV} input=${RAW}" >&2
+            printf 'Tried: %s\n' "${candidates[*]}" >&2
+            echo "Produce vX.Y.Z-staging / vX.Y.Z-production with release.yaml after publishing a Release, or pass that full tag." >&2
+            echo "https://github.com/${{ github.repository }}/pkgs/container/" >&2
+            exit 1
+          fi
+
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${RESOLVED}" >> "$GITHUB_OUTPUT"
+          echo "Using image: ${REPO_LC}:${RESOLVED}"
+
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - docker
+      - deploy
+      - ${{ inputs.environment == 'development' && 'dev-server' ||
+        'qsmart-prod-server' }}
+    needs: validate
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://${{ vars.DOMAIN }}
+    permissions:
+      contents: read
+      packages: read
+    env:
+      APP_DIR: /home/deploy/qsmart-webapp-${{ inputs.environment == 'development' &&
+        'dev' || inputs.environment }}
+      VERSION: ${{ inputs.version }}
+      IMAGE_TAG: ${{ needs.validate.outputs.image_tag }}
+    outputs:
+      container-name: ${{ steps.set-name.outputs.name }}
+    steps:
+      - name: Set container name
+        id: set-name
+        run: echo "name=${{ vars.STACK_NAME }}" >> "$GITHUB_OUTPUT"
+      - name: Fix workspace permissions
+        run: sudo chown -R "$(whoami):$(id -gn)" "${{ github.workspace }}" || true
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          clean: true
+
+      - name: Authenticate to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{
+          github.actor }}" --password-stdin
+
+      - name: Prepare deployment directory
+        run: mkdir -p "${{ env.APP_DIR }}"
+
+      - name: Generate .env file
+        run: |
+          cat > ${{ env.APP_DIR }}/.env << EOF
+          # run=${{ github.run_id }} requested=${{ env.VERSION }}
+
+          QSMART_WEBAPP_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG=${{ env.IMAGE_TAG }}
+          DOMAIN=${{ vars.DOMAIN }}
+          STACK_NAME=${{ vars.STACK_NAME }}
+          COMPOSE_FILE=compose.yaml:compose.traefik.yaml
+          EOF
+          chmod 600 ${{ env.APP_DIR }}/.env
+
+      - name: Copy compose files
+        run: cp compose.yaml compose.traefik.yaml "${{ env.APP_DIR }}/"
+
+      - name: Pull image
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          echo "Pulling image tag ${{ env.IMAGE_TAG }} (requested ${{ env.VERSION }})"
+          docker compose pull
+
+      - name: Verify container image signature (cosign)
+        uses: ./.github/actions/cosign-verify-ghcr-image
+        with:
+          tag: ${{ env.IMAGE_TAG }}
+
+      - name: Store previous image for rollback
+        working-directory: ${{ env.APP_DIR }}
+        run: docker inspect "${{ vars.STACK_NAME }}" --format='{{.Config.Image}}'
+          2>/dev/null > .previous-image || echo "none" > .previous-image
+
+      - name: Deploy
+        working-directory: ${{ env.APP_DIR }}
+        run: docker compose up -d --remove-orphans --wait --wait-timeout 120
+
+  smoke-test:
+    name: Smoke Test (${{ inputs.environment }})
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - docker
+      - deploy
+      - ${{ inputs.environment == 'development' && 'dev-server' ||
+        'qsmart-prod-server' }}
+    needs: deploy
+    environment:
+      name: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - name: Health check (Docker)
+        run: |
+          CN="${{ needs.deploy.outputs.container-name }}"
+          HEALTH=$(docker inspect "$CN" --format='{{.State.Health.Status}}')
+          [ "$HEALTH" = "healthy" ] || { docker logs "$CN" --tail 50; exit 1; }
+
+      - name: Nginx serves /health (in-container)
+        run: |
+          CN="${{ needs.deploy.outputs.container-name }}"
+          docker exec "$CN" wget --spider -q http://localhost:8080/health ||
+            { docker logs "$CN" --tail 80; exit 1; }
+
+      - name: Nginx serves SPA / (in-container)
+        run: |
+          CN="${{ needs.deploy.outputs.container-name }}"
+          docker exec "$CN" wget --spider -q http://localhost:8080/ ||
+            { docker logs "$CN" --tail 80; exit 1; }
+
+  rollback:
+    name: Rollback (${{ inputs.environment }})
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - docker
+      - deploy
+      - ${{ inputs.environment == 'development' && 'dev-server' ||
+        'qsmart-prod-server' }}
+    needs: [ smoke-test, deploy ]
+    if: failure()
+    permissions:
+      contents: read
+    env:
+      APP_DIR: /home/deploy/qsmart-webapp-${{ inputs.environment == 'development' &&
+        'dev' || inputs.environment }}
+    steps:
+      - name: Attempt rollback
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          PREVIOUS=$(cat .previous-image 2>/dev/null || echo "none")
+          if [ "$PREVIOUS" = "none" ] || [ -z "$PREVIOUS" ]; then
+            echo "No previous image found -- manual intervention required"
+            exit 1
+          fi
+
+          PREV_REPO=$(echo "$PREVIOUS" | rev | cut -d: -f2- | rev)
+          PREV_TAG=$(echo "$PREVIOUS" | rev | cut -d: -f1 | rev)
+          export QSMART_WEBAPP_IMAGE="$PREV_REPO"
+          export TAG="$PREV_TAG"
+
+          docker compose pull qsmart-webapp
+          docker compose up -d --no-deps --force-recreate qsmart-webapp
+
+      - name: Verify rollback
+        working-directory: ${{ env.APP_DIR }}
+        run: timeout 60 bash -c 'until docker exec "${{
+          needs.deploy.outputs.container-name }}" wget --spider -q
+          http://localhost:8080/health; do sleep 3; done'
+
+      - name: Rollback summary
+        if: always()
+        run: |
+          echo "========================================"
+          echo "ROLLBACK EXECUTED"
+          echo "========================================"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Failed version: ${{ inputs.version }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Reason: ${{ inputs.reason || 'Not specified' }}"
+          echo "Please investigate before retrying."
