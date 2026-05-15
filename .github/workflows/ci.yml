@@ -1,0 +1,270 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        uses: ./.github/actions
+        with:
+          working-directory: .
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test -- --ci --coverage --maxWorkers=2
+
+      - name: Upload coverage
+        if: always()
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          fail_ci_if_error: false
+
+  audit:
+    name: NPM Audit
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: NPM Audit
+        run: npm audit --audit-level=critical
+
+  build-and-push:
+    name: Build & Push Image
+    runs-on: ubuntu-24.04
+    needs: [ lint-and-test ]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: development
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: ./Dockerfile
+          target: runtime
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=webapp
+          cache-to: type=gha,scope=webapp,mode=max
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            VITE_API_TIMEOUT=${{ vars.VITE_API_TIMEOUT || '30000' }}
+            VITE_APP_NAME=${{ vars.VITE_APP_NAME || 'Q-smart WebApp' }}
+            VITE_APP_VERSION=sha-${{ github.sha }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - name: Sign image
+        run: cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{
+          steps.build.outputs.digest }}
+
+  scan-image:
+    name: Security Scan
+    runs-on: ubuntu-24.04
+    needs: build-and-push
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # v0.34.2
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{
+            needs.build-and-push.outputs.image-digest }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+          db-repository: ghcr.io/aquasecurity/trivy-db:2
+
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - docker
+      - deploy
+      - dev-server
+    needs: [ build-and-push, scan-image ]
+    if: |
+      always() &&
+      needs.build-and-push.result == 'success' &&
+      (needs.scan-image.result == 'success' || needs.scan-image.result == 'skipped')
+    environment:
+      name: development
+      url: https://${{ vars.DOMAIN }}
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      container-name: ${{ steps.set-name.outputs.name }}
+    env:
+      APP_DIR: /home/deploy/qsmart-webapp-dev
+    steps:
+      - name: Set container name
+        id: set-name
+        run: echo "name=${{ vars.STACK_NAME }}" >> "$GITHUB_OUTPUT"
+
+      - name: Fix workspace permissions
+        run: sudo chown -R "$(whoami):$(id -gn)" "${{ github.workspace }}" || true
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          clean: true
+
+      - name: Authenticate to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{
+          github.actor }}" --password-stdin
+
+      - name: Prepare deployment directory
+        run: mkdir -p "${{ env.APP_DIR }}"
+
+      - name: Generate .env file
+        run: |
+          cat > "${{ env.APP_DIR }}/.env" <<'ENVEOF'
+          QSMART_WEBAPP_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG=sha-${{ github.sha }}
+          DOMAIN=${{ vars.DOMAIN }}
+          STACK_NAME=${{ vars.STACK_NAME }}
+          COMPOSE_FILE=compose.yaml:compose.traefik.yaml
+          ENVEOF
+
+      - name: Copy compose files
+        run: cp compose.yaml compose.traefik.yaml "${{ env.APP_DIR }}/"
+
+      - name: Pull image
+        working-directory: ${{ env.APP_DIR }}
+        run: docker compose pull
+
+      - name: Verify container image signature (cosign)
+        uses: ./.github/actions/cosign-verify-ghcr-image
+        with:
+          tag: sha-${{ github.sha }}
+
+      - name: Store previous image for rollback
+        working-directory: ${{ env.APP_DIR }}
+        run: docker inspect "${{ vars.STACK_NAME }}" --format='{{.Config.Image}}'
+          2>/dev/null > .previous-image || echo "none" > .previous-image
+
+      - name: Deploy
+        working-directory: ${{ env.APP_DIR }}
+        run: docker compose up -d --remove-orphans --wait --wait-timeout 60
+
+      - name: Verify deployment
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          HEALTH=$(docker inspect "${{ vars.STACK_NAME }}" --format='{{.State.Health.Status}}')
+          [ "$HEALTH" = "healthy" ] || { docker logs "${{ vars.STACK_NAME }}" --tail 50; exit 1; }
+
+          HTTP_CODE=$(docker exec "${{ vars.STACK_NAME }}" wget -q -O /dev/null -S "http://localhost:8080/health" 2>&1 | grep "HTTP/" | awk '{print $2}' || echo "000")
+          [ "$HTTP_CODE" = "200" ] || { docker logs "${{ vars.STACK_NAME }}" --tail 50; exit 1; }
+
+      - name: Cleanup old images
+        run: |
+          docker image prune -f --filter "until=168h"
+          docker builder prune -f --filter "until=24h" || true
+
+  rollback-dev:
+    name: Rollback Dev
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - docker
+      - deploy
+      - dev-server
+    needs: deploy-dev
+    if: always() && needs.deploy-dev.result == 'failure'
+    permissions:
+      contents: read
+    env:
+      APP_DIR: /home/deploy/qsmart-webapp-dev
+    steps:
+      - name: Attempt rollback
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          PREVIOUS=$(cat .previous-image 2>/dev/null || echo "none")
+          if [ "$PREVIOUS" = "none" ] || [ -z "$PREVIOUS" ]; then
+            echo "No previous image found -- manual intervention required"
+            exit 1
+          fi
+
+          PREV_REPO=$(echo "$PREVIOUS" | rev | cut -d: -f2- | rev)
+          PREV_TAG=$(echo "$PREVIOUS" | rev | cut -d: -f1 | rev)
+          export QSMART_WEBAPP_IMAGE="$PREV_REPO"
+          export TAG="$PREV_TAG"
+
+          docker compose pull qsmart-webapp
+          docker compose up -d --no-deps --force-recreate qsmart-webapp
+
+      - name: Verify rollback
+        working-directory: ${{ env.APP_DIR }}
+        run: timeout 60 bash -c 'until docker exec "${{
+          needs.deploy-dev.outputs.container-name }}" wget --spider -q
+          http://localhost:8080/health; do sleep 3; done'
+
+      - name: Rollback summary
+        if: always()
+        run: |
+          echo "========================================"
+          echo "ROLLBACK EXECUTED"
+          echo "========================================"
+          echo "Environment: development"
+          echo "Failed version: sha-${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Please investigate before retrying."
