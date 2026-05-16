@@ -29,7 +29,7 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.eslint.json",
+        project: "./tsconfig.app.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -39,7 +39,7 @@ export default defineConfig([
     files: ["src/**/*.test.{ts,tsx}", "src/setupTests.ts"],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.eslint.json",
+        project: "./tsconfig.test.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -49,7 +49,7 @@ export default defineConfig([
     files: ["vite.config.ts", "jest.config.cjs"],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.eslint.json",
+        project: "./tsconfig.node.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },
