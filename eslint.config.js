@@ -7,6 +7,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
   globalIgnores(["dist"]),
+
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -19,7 +20,7 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
-  // Type-aware linting for app source files
+
   {
     files: [
       "src/**/*.{ts,tsx}",
@@ -29,24 +30,27 @@ export default defineConfig([
     languageOptions: {
       parserOptions: {
         project: "./tsconfig.eslint.json",
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
-  // Type-aware linting for test files
+
   {
     files: ["src/**/*.test.{ts,tsx}", "src/setupTests.ts"],
     languageOptions: {
       parserOptions: {
         project: "./tsconfig.eslint.json",
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
-  // Type-aware linting for config files
+
   {
     files: ["vite.config.ts", "jest.config.cjs"],
     languageOptions: {
       parserOptions: {
         project: "./tsconfig.eslint.json",
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
