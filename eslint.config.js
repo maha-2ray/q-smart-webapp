@@ -28,7 +28,7 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.app.json",
+        project: "./tsconfig.eslint.json",
       },
     },
   },
@@ -37,7 +37,7 @@ export default defineConfig([
     files: ["src/**/*.test.{ts,tsx}", "src/setupTests.ts"],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.test.json",
+        project: "./tsconfig.eslint.json",
       },
     },
   },
@@ -46,7 +46,7 @@ export default defineConfig([
     files: ["vite.config.ts", "jest.config.cjs"],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.node.json",
+        project: "./tsconfig.eslint.json",
       },
     },
   },
