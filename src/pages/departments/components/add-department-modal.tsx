@@ -159,7 +159,7 @@ export const AddDepartmentModal: React.FC<AddDepartmentModalProps> = ({
           {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex gap-3">
-              <div className="text-blue-600 flex-shrink-0">ⓘ</div>
+              <div className="text-blue-600 shrink-0">ⓘ</div>
               <div>
                 <p className="text-sm font-semibold text-blue-900">
                   Department Configuration
