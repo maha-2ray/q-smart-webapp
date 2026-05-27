@@ -4,7 +4,7 @@ import { FaExclamationTriangle } from "react-icons/fa";
 import { IoHome } from "react-icons/io5";
 import { LuRotateCcw } from "react-icons/lu";
 import { logger } from "../libs/security/logger";
-import { config } from "../config/env";
+import { ENV } from "../config/env";
 
 type ErrorBoundaryState = {
   hasError: boolean;
@@ -65,7 +65,7 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       const errorMessage = this.getErrorMessage(this.state.error);
-      const showDetails = config.isDevelopment;
+      const showDetails = ENV.isDevelopment;
 
       return (
         <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
