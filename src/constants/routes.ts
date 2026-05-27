@@ -1,6 +1,7 @@
 import React from "react";
 import { lazyWithReload } from "../libs/lazy-with-reloads";
 
+const Landing = lazyWithReload(() => import("../pages/landing"));
 const Dashboard = lazyWithReload(() => import("../pages/dashboard"));
 const Customer = lazyWithReload(() => import("../pages/customer"));
 const Departments = lazyWithReload(() => import("../pages/departments"));
@@ -21,6 +22,13 @@ export interface RouteConfig {
 }
 
 export const routes: RouteConfig[] = [
+  {
+    path: "/",
+    component: Landing as React.LazyExoticComponent<
+      React.ComponentType<unknown>
+    >,
+    protected: false,
+  },
   {
     path: "/dashboard",
     component: Dashboard as React.LazyExoticComponent<
