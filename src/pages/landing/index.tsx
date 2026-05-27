@@ -447,7 +447,7 @@ const Landing: React.FC = () => {
           </div>
 
           <div className="border-t border-blue-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm">
-            <p>&copy; 2024 Q-SMART. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Q-SMART. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <a href="#" className="hover:text-white">
                 Privacy
