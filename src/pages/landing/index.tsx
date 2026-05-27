@@ -276,7 +276,7 @@ const Landing: React.FC = () => {
             {
               title: "Department control",
               description:
-                "Run separate profiles, counters, and service types one workspace.",
+                "Run separate profiles, counters, and service types in one workspace.",
             },
             {
               title: "Walk-in support",
