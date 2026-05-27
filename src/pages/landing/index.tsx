@@ -295,7 +295,7 @@ const Landing: React.FC = () => {
             },
           ].map((feature, idx) => (
             <div
-              key={idx}
+              key={feature.title}
               className="p-6 rounded-lg border border-gray-200 hover:shadow-lg transition"
             >
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
