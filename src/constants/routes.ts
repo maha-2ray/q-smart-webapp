@@ -2,6 +2,7 @@ import React from "react";
 import { lazyWithReload } from "../libs/lazy-with-reloads";
 
 const Landing = lazyWithReload(() => import("../pages/landing"));
+const Login = lazyWithReload(() => import("../pages/login"));
 const Dashboard = lazyWithReload(() => import("../pages/dashboard"));
 const Customer = lazyWithReload(() => import("../pages/customer"));
 const Departments = lazyWithReload(() => import("../pages/departments"));
@@ -27,6 +28,11 @@ export const routes: RouteConfig[] = [
     component: Landing as React.LazyExoticComponent<
       React.ComponentType<unknown>
     >,
+    protected: false,
+  },
+  {
+    path: "/login",
+    component: Login as React.LazyExoticComponent<React.ComponentType<unknown>>,
     protected: false,
   },
   {
