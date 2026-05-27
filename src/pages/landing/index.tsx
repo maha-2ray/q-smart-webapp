@@ -293,7 +293,7 @@ const Landing: React.FC = () => {
               description:
                 "Track no-shows, service duration, throughput, and staff efficiency.",
             },
-          ].map((feature, idx) => (
+          ].map((feature) => (
             <div
               key={feature.title}
               className="p-6 rounded-lg border border-gray-200 hover:shadow-lg transition"
@@ -447,7 +447,9 @@ const Landing: React.FC = () => {
           </div>
 
           <div className="border-t border-blue-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm">
-            <p>&copy; {new Date().getFullYear()} Q-SMART. All rights reserved.</p>
+            <p>
+              &copy; {new Date().getFullYear()} Q-SMART. All rights reserved.
+            </p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <a href="#" className="hover:text-white">
                 Privacy
