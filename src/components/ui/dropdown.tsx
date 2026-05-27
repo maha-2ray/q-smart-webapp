@@ -19,7 +19,8 @@ const DropDown: React.FC<UserDropdownProps> = ({
 
   const handleLogout = () => {
     // Clear auth data
-    localStorage.removeItem("token");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userEmail");
     navigate("/login");
     setIsOpen(false);
   };

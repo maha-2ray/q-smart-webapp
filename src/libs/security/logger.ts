@@ -1,4 +1,4 @@
-import { config } from "../../config/env";
+import { ENV } from "../../config/env";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -53,7 +53,7 @@ const sanitizeForLogging = (data: unknown): unknown => {
  * Logger class with security-conscious logging
  */
 class Logger {
-  private isDevelopment = config.isDevelopment;
+  private isDevelopment = ENV.isDevelopment;
 
   private log(level: LogLevel, message: string, options?: LogOptions): void {
     if (!this.isDevelopment && level === "debug") {

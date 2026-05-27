@@ -1,13 +1,21 @@
 import { useState } from "react";
 import NavBar from "./navbar";
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import Sidebar from "./sidebar";
 
 const PrivateRoute = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Derive isAuthenticated from localStorage without setState
+  const isAuthenticated = !!localStorage.getItem("authToken");
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
