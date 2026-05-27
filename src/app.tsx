@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { routes } from "./constants/routes";
 import { lazyWithReload } from "./libs/lazy-with-reloads";
 import ErrorBoundary from "./hooks/error-boundary";
@@ -13,8 +13,6 @@ function App() {
   return (
     <ErrorBoundary>
       <Routes>
-        {/* <Route path="/" element={<PrivateRoute />} /> */}
-        <Route path="/" element={<Navigate to="/queue-operations" />} />
         {routes.map(({ path, component, protected: isProtected }) => {
           const RouteComponent = component ? (
             <Suspense>{React.createElement(component)}</Suspense>
