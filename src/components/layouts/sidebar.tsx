@@ -5,6 +5,7 @@ const Sidebar = () => {
     { name: "Queue Operations", path: "/queue-operations" },
     { name: "Live Dashboard", path: "/dashboard" },
     { name: "Departments", path: "/departments" },
+    { name: "Scheduling", path: "/scheduling" },
     { name: "Staff Management", path: "/staff-management" },
     { name: "Reports", path: "/reports" },
     { name: "Settings", path: "/settings" },

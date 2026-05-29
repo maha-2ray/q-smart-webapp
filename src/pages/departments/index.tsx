@@ -3,13 +3,14 @@ import { PageLayout } from "../../components/layouts/page-layout";
 import { Button } from "../../components/ui/button";
 import {
   DepartmentMetrics,
-  DepartmentForm,
   DepartmentCard,
   RuleChecks,
   AddDepartmentModal,
+  UnitForm,
 } from "./components";
 import type { DepartmentFormData } from "./components/department-form";
-import type { Department } from "./components/department-card";
+import type { UnitFormData } from "./components/unit-form";
+import type { Department, Unit } from "./components/department-card";
 import { FiPlus } from "react-icons/fi";
 
 const mockDepartments: Department[] = [
@@ -55,8 +56,40 @@ const mockDepartments: Department[] = [
   },
 ];
 
+const mockUnits: Unit[] = [
+  {
+    id: "1",
+    name: "Personal Accounts",
+    code: "PA",
+    departmentId: "1",
+    status: "active",
+  },
+  {
+    id: "2",
+    name: "Business Accounts",
+    code: "BA",
+    departmentId: "1",
+    status: "active",
+  },
+  {
+    id: "3",
+    name: "Mortgage Desk",
+    code: "MD",
+    departmentId: "2",
+    status: "active",
+  },
+  {
+    id: "4",
+    name: "Cash Counter",
+    code: "CC",
+    departmentId: "3",
+    status: "active",
+  },
+];
+
 const Departments: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>(mockDepartments);
+  const [units, setUnits] = useState<Unit[]>(mockUnits);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const activeDepartments = departments.filter((d) => d.status === "active");
@@ -82,6 +115,18 @@ const Departments: React.FC = () => {
     };
     setDepartments([...departments, newDept]);
     console.log("Department created:", data);
+  };
+
+  const handleCreateUnit = (data: UnitFormData) => {
+    const newUnit: Unit = {
+      id: String(units.length + 1),
+      name: data.name,
+      code: data.code,
+      departmentId: data.departmentId,
+      status: "active",
+    };
+    setUnits([...units, newUnit]);
+    console.log("Unit created:", data);
   };
 
   const handleToggleActive = (id: string) => {
@@ -143,8 +188,12 @@ const Departments: React.FC = () => {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           {/* Form Section */}
-          <div className="lg:col-span-1">
-            <DepartmentForm onSubmit={handleCreateDepartment} />
+          <div className="lg:col-span-1 space-y-6">
+            <UnitForm
+              departments={departments}
+              onSubmit={handleCreateUnit}
+              units={units}
+            />
           </div>
 
           {/* Department Cards */}
@@ -154,6 +203,7 @@ const Departments: React.FC = () => {
                 <DepartmentCard
                   key={dept.id}
                   department={dept}
+                  units={units.filter((unit) => unit.departmentId === dept.id)}
                   onToggleActive={handleToggleActive}
                   onEdit={handleEdit}
                   onArchive={handleArchive}

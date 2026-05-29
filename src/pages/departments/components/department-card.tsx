@@ -1,5 +1,13 @@
 import React from "react";
 
+export interface Unit {
+  id: string;
+  name: string;
+  code: string;
+  departmentId: string;
+  status: "active" | "inactive";
+}
+
 export interface Department {
   id: string;
   name: string;
@@ -13,6 +21,7 @@ export interface Department {
 
 interface DepartmentCardProps {
   department: Department;
+  units?: Unit[];
   onToggleActive: (id: string) => void;
   onEdit: (id: string) => void;
   onArchive: (id: string) => void;
@@ -21,6 +30,7 @@ interface DepartmentCardProps {
 
 export const DepartmentCard: React.FC<DepartmentCardProps> = ({
   department,
+  units = [],
   onToggleActive,
   onEdit,
   onArchive,
@@ -82,6 +92,31 @@ export const DepartmentCard: React.FC<DepartmentCardProps> = ({
             {department.avgWait}
           </p>
         </div>
+      </div>
+
+      <div className="mb-6 pb-6 border-b border-slate-200">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-gray-600 uppercase font-semibold">Units</p>
+          <span className="text-xs font-semibold text-gray-500">
+            {units.length}
+          </span>
+        </div>
+
+        {units.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {units.map((unit) => (
+              <span
+                key={unit.id}
+                className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+              >
+                <span className="font-bold text-blue-800">{unit.code}</span>
+                {unit.name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No units attached yet.</p>
+        )}
       </div>
 
       {/* Toggle & Actions */}

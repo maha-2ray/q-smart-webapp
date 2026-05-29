@@ -1,7 +1,7 @@
 import React from "react";
 import { lazyWithReload } from "../libs/lazy-with-reloads";
 
-const Landing = lazyWithReload(() => import("../pages/landing"));
+// const Landing = lazyWithReload(() => import("../pages/landing"));
 const Login = lazyWithReload(() => import("../pages/login"));
 const Dashboard = lazyWithReload(() => import("../pages/dashboard"));
 const Customer = lazyWithReload(() => import("../pages/customer"));
@@ -11,6 +11,7 @@ const QueueOperations = lazyWithReload(
 );
 const Reports = lazyWithReload(() => import("../pages/reports"));
 const Settings = lazyWithReload(() => import("../pages/settings"));
+const Scheduling = lazyWithReload(() => import("../pages/scheduling"));
 const StaffManagement = lazyWithReload(
   () => import("../pages/staff-management"),
 );
@@ -25,9 +26,7 @@ export interface RouteConfig {
 export const routes: RouteConfig[] = [
   {
     path: "/",
-    component: Landing as React.LazyExoticComponent<
-      React.ComponentType<unknown>
-    >,
+    component: Login as React.LazyExoticComponent<React.ComponentType<unknown>>,
     protected: false,
   },
   {
@@ -80,6 +79,13 @@ export const routes: RouteConfig[] = [
   {
     path: "/staff-management",
     component: StaffManagement as React.LazyExoticComponent<
+      React.ComponentType<unknown>
+    >,
+    protected: true,
+  },
+  {
+    path: "/scheduling",
+    component: Scheduling as React.LazyExoticComponent<
       React.ComponentType<unknown>
     >,
     protected: true,
