@@ -1,5 +1,6 @@
 import { GiHamburgerMenu } from "react-icons/gi";
 import { NavLink } from "react-router-dom";
+import logo from "../../assets/q-smart.png";
 
 import Dropdown from "../ui/dropdown";
 
@@ -29,7 +30,7 @@ const NavBar: React.FC<NavBarProps> = ({ toggleSidebar }) => {
       </button>
       <div className="hidden md:flex lg:flex items-center gap-4 md:gap-8">
         <img
-          src="./src/assets/q-smart.png"
+          src={logo}
           alt=""
           className="w-20 h-20 md:w-22 md:h-22 lg:w-25 lg:h-25"
         />
