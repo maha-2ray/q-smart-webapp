@@ -7,6 +7,9 @@ import {
 } from "./components";
 import type { LocationData } from "./components/location-select";
 import type { Service } from "./components/service-select";
+import { useUnits } from "../../hooks/use-departments";
+import { useCancelTicket, useCreateTicket } from "../../hooks/use-queue";
+import type { QueueTicket } from "../../services/queue";
 
 type Step = "location" | "service" | "details" | "status";
 
@@ -15,24 +18,6 @@ const mockLocations: LocationData[] = [
     id: "1",
     name: "CityBank Downtown",
     openUntil: "5:00 PM",
-  },
-];
-
-const mockServices: Service[] = [
-  {
-    id: "A",
-    name: "Account Services",
-    waitTime: "15 min",
-  },
-  {
-    id: "B",
-    name: "Loan Applications",
-    waitTime: "5 min",
-  },
-  {
-    id: "C",
-    name: "Teller Services",
-    waitTime: "25 min",
   },
 ];
 
@@ -49,7 +34,16 @@ const Customer: React.FC = () => {
   const [customerData, setCustomerData] = useState<Partial<CustomerData>>({
     notification: "browser",
   });
-  const [ticketNumber, setTicketNumber] = useState("A042");
+  const [ticket, setTicket] = useState<QueueTicket | null>(null);
+  const unitsQuery = useUnits();
+  const createTicket = useCreateTicket();
+  const cancelTicket = useCancelTicket();
+
+  const services: Service[] = (unitsQuery.data || []).map((unit) => ({
+    id: unit.id,
+    name: unit.name,
+    waitTime: "-",
+  }));
 
   const handleLocationSelect = (locationId: string) => {
     setCustomerData((prev) => ({ ...prev, locationId }));
@@ -84,22 +78,34 @@ const Customer: React.FC = () => {
       notification: data.notification,
     }));
     // Generate ticket number based on service
-    const service = mockServices.find((s) => s.id === customerData.serviceId);
-    if (service) {
-      setTicketNumber(`${service.id}042`);
-    }
-    setCurrentStep("status");
+    if (!customerData.serviceId) return;
+
+    createTicket.mutate(
+      {
+        unitId: customerData.serviceId,
+        customerName: data.name,
+        customerPhone: data.phone,
+      },
+      {
+        onSuccess: (createdTicket) => {
+          setTicket(createdTicket);
+          setCurrentStep("status");
+        },
+      },
+    );
   };
 
   const handleLeaveQueue = () => {
+    if (ticket) {
+      cancelTicket.mutate(ticket.id);
+    }
+
     setCurrentStep("service");
     setCustomerData({});
-    setTicketNumber("A042");
+    setTicket(null);
   };
 
-  const selectedService = mockServices.find(
-    (s) => s.id === customerData.serviceId,
-  );
+  const selectedService = services.find((s) => s.id === customerData.serviceId);
 
   return (
     <div className="overflow-x-auto max-h-[calc(135vh-300px)]">
@@ -111,10 +117,18 @@ const Customer: React.FC = () => {
       )}
 
       {currentStep === "service" && (
-        <ServiceSelect
-          services={mockServices}
-          onSelectService={handleServiceSelect}
-        />
+        <>
+          {unitsQuery.isLoading && (
+            <p className="p-6 text-sm text-gray-500">Loading services...</p>
+          )}
+          {unitsQuery.isError && (
+            <p className="p-6 text-sm text-red-600">Unable to load services.</p>
+          )}
+          <ServiceSelect
+            services={services}
+            onSelectService={handleServiceSelect}
+          />
+        </>
       )}
 
       {currentStep === "details" && selectedService && (
@@ -130,11 +144,17 @@ const Customer: React.FC = () => {
 
       {currentStep === "status" && selectedService && (
         <QueueStatus
-          ticketNumber={ticketNumber}
-          position="3rd in line"
-          estimatedWait="~12 min"
-          status="Waiting for teller"
-          preparationNotes="Please have your ID and account number ready. We will notify you when it's your turn."
+          ticketNumber={ticket?.ticketNumber || "-"}
+          position={
+            ticket?.queuePosition ? `${ticket.queuePosition} in line` : "Queued"
+          }
+          estimatedWait="-"
+          status={ticket?.status || "WAITING"}
+          preparationNotes={
+            createTicket.isPending
+              ? "Creating your ticket..."
+              : "We will notify you when it is your turn."
+          }
           onLeaveQueue={handleLeaveQueue}
         />
       )}

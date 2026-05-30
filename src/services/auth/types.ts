@@ -10,9 +10,8 @@ export interface RegisterRequest {
   lastName: string;
   email: string;
   username: string;
-  phoneNumber: string;
   password: string;
-  approved: boolean;
+  confirmPassword: string;
   role: AuthRole | string;
 }
 

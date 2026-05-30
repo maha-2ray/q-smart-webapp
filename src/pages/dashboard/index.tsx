@@ -3,49 +3,42 @@ import { PageLayout } from "../../components/layouts/page-layout";
 import SummaryCard from "../../components/ui/summary-cards";
 import type { DepartmentCardProps } from "../../components/ui/department-card";
 import DepartmentCard from "../../components/ui/department-card";
+import {
+  useDepartmentDashboardStats,
+  useTicketDashboardStats,
+} from "../../hooks/use-dashboard";
+import { useDepartments } from "../../hooks/use-departments";
 
 const Dashboard: React.FC = () => {
+  const ticketStatsQuery = useTicketDashboardStats();
+  const departmentStatsQuery = useDepartmentDashboardStats();
+  const departmentsQuery = useDepartments();
+
+  const ticketStats = ticketStatsQuery.data;
+  const departmentStats = departmentStatsQuery.data;
+  const departments = departmentsQuery.data || [];
+
   const summaryCardsData = [
-    { title: "Total Waiting", value: 25, rate: 5 },
-    { title: "Global Avg. Waiting Time", value: "15 mins", rate: -2 },
-    { title: "Total Served", value: 120, rate: 10 },
-    { title: "Staff on Duty", value: 8, rate: 0 },
+    { title: "Total Tickets", value: ticketStats?.totalTickets ?? 0, rate: 0 },
+    { title: "Waiting", value: ticketStats?.waitingCount ?? 0, rate: 0 },
+    { title: "Completed", value: ticketStats?.completedCount ?? 0, rate: 0 },
+    {
+      title: "Departments",
+      value: departmentStats?.totalDepartments ?? departments.length,
+      rate: 0,
+    },
   ];
 
-  const departmentCardsData: DepartmentCardProps[] = [
-    {
-      id: "1",
-      name: "Customer Service",
-      ticketPrefix: "CS",
-      status: "open",
-      peopleWaiting: 5,
-      avgWaitingTime: 10,
-    },
-    {
-      id: "2",
-      name: "Technical Support",
-      ticketPrefix: "TS",
-      status: "open",
-      peopleWaiting: 3,
-      avgWaitingTime: 15,
-    },
-    {
-      id: "3",
-      name: "Billing",
-      ticketPrefix: "BL",
-      status: "closed",
+  const departmentCardsData: DepartmentCardProps[] = departments.map(
+    (department, index) => ({
+      id: department.id,
+      name: department.name,
+      ticketPrefix: department.name.slice(0, 2).toUpperCase() || `${index + 1}`,
+      status: department.isActive === false ? "closed" : "open",
       peopleWaiting: 0,
       avgWaitingTime: 0,
-    },
-    {
-      id: "4",
-      name: "Sales",
-      ticketPrefix: "SL",
-      status: "open",
-      peopleWaiting: 7,
-      avgWaitingTime: 8,
-    },
-  ];
+    }),
+  );
 
   return (
     <PageLayout
@@ -67,17 +60,21 @@ const Dashboard: React.FC = () => {
           Department Overview
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {departmentCardsData.map((dept) => (
-            <DepartmentCard
-              key={dept.id}
-              id={dept.id}
-              name={dept.name}
-              ticketPrefix={dept.ticketPrefix}
-              status={dept.status}
-              peopleWaiting={dept.peopleWaiting}
-              avgWaitingTime={dept.avgWaitingTime}
-            />
-          ))}
+          {departmentsQuery.isLoading && (
+            <p className="text-sm text-gray-500">Loading departments...</p>
+          )}
+          {!departmentsQuery.isLoading &&
+            departmentCardsData.map((dept) => (
+              <DepartmentCard
+                key={dept.id}
+                id={dept.id}
+                name={dept.name}
+                ticketPrefix={dept.ticketPrefix}
+                status={dept.status}
+                peopleWaiting={dept.peopleWaiting}
+                avgWaitingTime={dept.avgWaitingTime}
+              />
+            ))}
         </div>
       </div>
     </PageLayout>

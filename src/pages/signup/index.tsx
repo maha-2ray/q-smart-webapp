@@ -25,6 +25,7 @@ const Signup: React.FC = () => {
     username: "",
     phoneNumber: "",
     password: "",
+    confirmPassword: "",
     role: defaultRole,
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -54,10 +55,20 @@ const Signup: React.FC = () => {
       return;
     }
 
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     try {
       await registerMutation.mutateAsync({
-        ...form,
-        approved: false,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        username: form.username,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+        role: form.role,
       });
       navigate("/dashboard");
     } catch (err) {
@@ -223,33 +234,58 @@ const Signup: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-900 mb-2"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <FiLock className="absolute left-3 top-3.5 text-gray-400" />
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={updateField("password")}
-                  placeholder="Create a secure password"
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
-                  disabled={isLoading}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-900 mb-2"
                 >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
-                </button>
+                  Password
+                </label>
+                <div className="relative">
+                  <FiLock className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={updateField("password")}
+                    placeholder="Create a secure password"
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
+                    disabled={isLoading}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-900 mb-2"
+                >
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <FiLock className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    id="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    value={form.confirmPassword}
+                    onChange={updateField("confirmPassword")}
+                    placeholder="Confirm your password"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
             </div>
 

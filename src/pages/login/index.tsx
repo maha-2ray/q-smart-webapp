@@ -7,7 +7,7 @@ import { useLogin } from "../../hooks/use-auth";
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const loginMutation = useLogin();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -19,13 +19,13 @@ const Login: React.FC = () => {
     setError("");
 
     try {
-      if (!email || !password) {
+      if (!username || !password) {
         setError("Please fill in all fields");
         return;
       }
 
       await loginMutation.mutateAsync({
-        username: email,
+        username,
         password,
       });
       navigate("/dashboard");
@@ -64,18 +64,18 @@ const Login: React.FC = () => {
             {/* Email Field */}
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-medium text-gray-900 mb-2"
               >
-                Email Address
+                Username
               </label>
               <div className="relative">
                 <FiMail className="absolute left-3 top-3.5 text-gray-400" />
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled={isLoading}

@@ -11,12 +11,21 @@ interface WalkInEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
   departments: DepartmentOption[];
+  onCreateTicket?: (data: {
+    customerName: string;
+    mobileNumber: string;
+    unitId: string;
+    notification: "browser" | "sms" | "both";
+  }) => void;
+  isCreating?: boolean;
 }
 
 export const WalkInEntryModal: React.FC<WalkInEntryModalProps> = ({
   isOpen,
   onClose,
   departments,
+  onCreateTicket,
+  isCreating = false,
 }) => {
   const [customerName, setCustomerName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
@@ -31,13 +40,14 @@ export const WalkInEntryModal: React.FC<WalkInEntryModalProps> = ({
   const ticketNumber = selectedDept ? `${selectedDept.prefix}048` : "---";
 
   const handleCreateTicket = () => {
-    console.log("Creating ticket:", {
+    if (!selectedDept || !customerName) return;
+
+    onCreateTicket?.({
       customerName,
       mobileNumber,
-      department: selectedDept?.name,
+      unitId: selectedDept.id,
       notification,
     });
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -132,18 +142,20 @@ export const WalkInEntryModal: React.FC<WalkInEntryModalProps> = ({
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <Button
-                  title="Create Walk-in Ticket"
+                  title={isCreating ? "Creating..." : "Create Walk-in Ticket"}
                   onClick={handleCreateTicket}
                   variant="primary"
                   size="md"
                   className="flex-1"
+                  disabled={isCreating || !customerName || !selectedDeptId}
                 />
                 <Button
-                  title="Create and Print Slip"
+                  title={isCreating ? "Creating..." : "Create and Print Slip"}
                   onClick={handleCreateTicket}
                   variant="outline"
                   size="md"
                   className="flex-1"
+                  disabled={isCreating || !customerName || !selectedDeptId}
                 />
               </div>
             </div>

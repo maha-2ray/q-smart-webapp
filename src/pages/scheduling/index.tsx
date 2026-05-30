@@ -2,6 +2,17 @@ import React, { useMemo, useState } from "react";
 import { FiCalendar, FiPlus } from "react-icons/fi";
 import { PageLayout } from "../../components/layouts/page-layout";
 import { Button } from "../../components/ui/button";
+import { useDepartments, useUnits } from "../../hooks/use-departments";
+import {
+  useCreateSchedule,
+  useSchedules,
+  useUpdateSchedule,
+} from "../../hooks/use-scheduling";
+import { useStaff } from "../../hooks/use-staff";
+import type {
+  DayOfWeek,
+  Schedule as ApiSchedule,
+} from "../../services/scheduling";
 
 type ScheduleStatus = "active" | "paused";
 type Recurrence = "One-time" | "Daily" | "Weekly" | "Monthly";
@@ -32,70 +43,6 @@ interface ScheduleFormData {
   notes: string;
 }
 
-const departments = [
-  "Account Services",
-  "Loan Applications",
-  "Teller Services",
-  "Document Verification",
-];
-
-const unitsByDepartment: Record<string, string[]> = {
-  "Account Services": ["Personal Accounts", "Business Accounts"],
-  "Loan Applications": ["Mortgage Desk", "SME Loans"],
-  "Teller Services": ["Cash Counter", "Cheque Processing"],
-  "Document Verification": ["KYC Review", "Compliance Desk"],
-};
-
-const staffMembers = [
-  "Sarah Jenkins",
-  "John Smith",
-  "Maria Garcia",
-  "Michael Brown",
-  "Amanda Taylor",
-];
-
-const initialSchedules: Schedule[] = [
-  {
-    id: "1",
-    title: "Morning teller coverage",
-    department: "Teller Services",
-    unit: "Cash Counter",
-    staff: "Maria Garcia",
-    date: "2026-06-01",
-    startTime: "09:00",
-    endTime: "13:00",
-    recurrence: "Weekly",
-    status: "active",
-    notes: "Priority window for branch opening traffic.",
-  },
-  {
-    id: "2",
-    title: "Loan review block",
-    department: "Loan Applications",
-    unit: "Mortgage Desk",
-    staff: "Michael Brown",
-    date: "2026-06-03",
-    startTime: "10:00",
-    endTime: "15:00",
-    recurrence: "Daily",
-    status: "active",
-    notes: "Keep two agent seats reserved during this block.",
-  },
-  {
-    id: "3",
-    title: "KYC overflow support",
-    department: "Document Verification",
-    unit: "KYC Review",
-    staff: "Amanda Taylor",
-    date: "2026-06-05",
-    startTime: "12:00",
-    endTime: "16:00",
-    recurrence: "One-time",
-    status: "paused",
-    notes: "Use only if verification volume crosses threshold.",
-  },
-];
-
 const emptyForm: ScheduleFormData = {
   title: "",
   department: "",
@@ -108,13 +55,64 @@ const emptyForm: ScheduleFormData = {
   notes: "",
 };
 
-const Scheduling: React.FC = () => {
-  const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
-  const [formData, setFormData] = useState<ScheduleFormData>(emptyForm);
+const dayNames: DayOfWeek[] = [
+  "SUNDAY",
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+];
 
-  const availableUnits = formData.department
-    ? unitsByDepartment[formData.department] || []
-    : [];
+const getDayOfWeek = (date: string): DayOfWeek =>
+  dayNames[new Date(`${date}T00:00:00`).getDay()] || "MONDAY";
+
+const Scheduling: React.FC = () => {
+  const [formData, setFormData] = useState<ScheduleFormData>(emptyForm);
+  const departmentsQuery = useDepartments();
+  const unitsQuery = useUnits();
+  const staffQuery = useStaff();
+  const schedulesQuery = useSchedules();
+  const createSchedule = useCreateSchedule();
+  const updateSchedule = useUpdateSchedule();
+
+  const availableUnits = (unitsQuery.data || []).filter(
+    (unit) => unit.departmentId === formData.department,
+  );
+  const staffMembers = (staffQuery.data?.users || []).map(
+    (staff) =>
+      [staff.firstName, staff.lastName].filter(Boolean).join(" ") ||
+      staff.username ||
+      staff.email,
+  );
+
+  const apiSchedules = Array.isArray(schedulesQuery.data)
+    ? schedulesQuery.data
+    : schedulesQuery.data?.schedules || [];
+
+  const schedules: Schedule[] = apiSchedules.map((schedule: ApiSchedule) => {
+    const unit = unitsQuery.data?.find((item) => item.id === schedule.unitId);
+    const department = departmentsQuery.data?.find(
+      (item) => item.id === unit?.departmentId,
+    );
+
+    return {
+      id: schedule.id,
+      title: `${unit?.name || "Unit"} ${schedule.dayOfWeek}`,
+      department: department?.name || "Unassigned",
+      unit: unit?.name || schedule.unitId,
+      staff: "Unassigned",
+      date: schedule.dayOfWeek,
+      startTime: schedule.openingTime,
+      endTime: schedule.closingTime,
+      recurrence: "Weekly",
+      status: schedule.isActive === false ? "paused" : "active",
+      notes: schedule.maxCapacity
+        ? `Max capacity: ${schedule.maxCapacity}`
+        : "",
+    };
+  });
 
   const activeSchedules = schedules.filter(
     (schedule) => schedule.status === "active",
@@ -143,34 +141,36 @@ const Scheduling: React.FC = () => {
       formData.title &&
       formData.department &&
       formData.unit &&
-      formData.staff &&
       formData.date &&
       formData.startTime &&
       formData.endTime;
 
     if (!isValid) return;
 
-    const newSchedule: Schedule = {
-      id: String(schedules.length + 1),
-      ...formData,
-      status: "active",
-    };
-
-    setSchedules([newSchedule, ...schedules]);
-    setFormData(emptyForm);
+    createSchedule.mutate(
+      {
+        unitId: formData.unit,
+        dayOfWeek: getDayOfWeek(formData.date),
+        openingTime: formData.startTime,
+        closingTime: formData.endTime,
+      },
+      {
+        onSuccess: () => setFormData(emptyForm),
+      },
+    );
   };
 
   const handleToggleStatus = (id: string) => {
-    setSchedules((prev) =>
-      prev.map((schedule) =>
-        schedule.id === id
-          ? {
-              ...schedule,
-              status: schedule.status === "active" ? "paused" : "active",
-            }
-          : schedule,
-      ),
-    );
+    const schedule = schedules.find((item) => item.id === id);
+
+    if (!schedule) return;
+
+    updateSchedule.mutate({
+      id,
+      payload: {
+        isActive: schedule.status !== "active",
+      },
+    });
   };
 
   const metrics = [
@@ -252,9 +252,9 @@ const Scheduling: React.FC = () => {
                     required
                   >
                     <option value="">Select Department</option>
-                    {departments.map((department) => (
-                      <option key={department} value={department}>
-                        {department}
+                    {(departmentsQuery.data || []).map((department) => (
+                      <option key={department.id} value={department.id}>
+                        {department.name}
                       </option>
                     ))}
                   </select>
@@ -274,8 +274,8 @@ const Scheduling: React.FC = () => {
                   >
                     <option value="">Select Unit</option>
                     {availableUnits.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
+                      <option key={unit.id} value={unit.id}>
+                        {unit.name}
                       </option>
                     ))}
                   </select>
@@ -290,7 +290,6 @@ const Scheduling: React.FC = () => {
                     value={formData.staff}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   >
                     <option value="">Select Staff</option>
                     {staffMembers.map((staff) => (
@@ -386,7 +385,6 @@ const Scheduling: React.FC = () => {
                     !formData.title ||
                     !formData.department ||
                     !formData.unit ||
-                    !formData.staff ||
                     !formData.date ||
                     !formData.startTime ||
                     !formData.endTime

@@ -2,119 +2,39 @@ import { PageLayout } from "../../components/layouts/page-layout";
 import React, { useState, useMemo } from "react";
 import { StaffHeader, StaffTable } from "./components";
 import type { StaffMember } from "./components";
-
-const mockStaffData: StaffMember[] = [
-  {
-    id: "1",
-    name: "Sarah Jenkins",
-    email: "sarah.j@citybank.com",
-    role: "Agent",
-    departments: ["Loan Applications", "Account Services"],
-    status: "Active",
-  },
-  {
-    id: "2",
-    name: "John Smith",
-    email: "jsmith@citybank.com",
-    role: "Agent",
-    departments: ["Account Services"],
-    status: "Active",
-  },
-  {
-    id: "3",
-    name: "Maria Garcia",
-    email: "mgarcia@citybank.com",
-    role: "Agent",
-    departments: ["Account Services", "Teller Services"],
-    status: "Active",
-  },
-  {
-    id: "4",
-    name: "David Chen",
-    email: "dchen@citybank.com",
-    role: "Admin",
-    departments: ["All Departments"],
-    status: "Active",
-  },
-  {
-    id: "5",
-    name: "Emily Wilson",
-    email: "ewilson@citybank.com",
-    role: "Agent",
-    departments: ["Teller Services"],
-    status: "Inactive",
-  },
-  {
-    id: "6",
-    name: "Michael Brown",
-    email: "mbrown@citybank.com",
-    role: "Supervisor",
-    departments: ["Loan Applications"],
-    status: "Active",
-  },
-  {
-    id: "7",
-    name: "Jessica Lee",
-    email: "jlee@citybank.com",
-    role: "Agent",
-    departments: ["Account Services"],
-    status: "Active",
-  },
-  {
-    id: "8",
-    name: "Robert Martinez",
-    email: "rmartinez@citybank.com",
-    role: "Agent",
-    departments: ["Teller Services"],
-    status: "Active",
-  },
-  {
-    id: "9",
-    name: "Amanda Taylor",
-    email: "ataylor@citybank.com",
-    role: "Supervisor",
-    departments: ["Account Services", "Teller Services"],
-    status: "Active",
-  },
-  {
-    id: "10",
-    name: "Christopher Anderson",
-    email: "canderson@citybank.com",
-    role: "Agent",
-    departments: ["Loan Applications"],
-    status: "Active",
-  },
-  {
-    id: "11",
-    name: "Lauren White",
-    email: "lwhite@citybank.com",
-    role: "Agent",
-    departments: ["Account Services"],
-    status: "Inactive",
-  },
-  {
-    id: "12",
-    name: "Daniel Harris",
-    email: "dharris@citybank.com",
-    role: "Admin",
-    departments: ["All Departments"],
-    status: "Active",
-  },
-];
+import { useDeleteStaffMember, useStaff } from "../../hooks/use-staff";
 
 const StaffManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const staffQuery = useStaff();
+  const deleteStaffMember = useDeleteStaffMember();
+
+  const staffData: StaffMember[] = useMemo(
+    () =>
+      (staffQuery.data?.users || []).map((staff) => ({
+        id: staff.id,
+        name:
+          [staff.firstName, staff.lastName].filter(Boolean).join(" ") ||
+          staff.username ||
+          staff.email,
+        email: staff.email,
+        role: staff.role,
+        departments: ["Unassigned"],
+        status: staff.approved === false ? "Inactive" : "Active",
+      })),
+    [staffQuery.data],
+  );
 
   const filteredStaff = useMemo(() => {
-    if (!searchQuery) return mockStaffData;
+    if (!searchQuery) return staffData;
 
-    return mockStaffData.filter(
+    return staffData.filter(
       (staff) =>
         staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         staff.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         staff.role.toLowerCase().includes(searchQuery.toLowerCase()),
     );
-  }, [searchQuery]);
+  }, [searchQuery, staffData]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -131,8 +51,7 @@ const StaffManagement: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    // TODO: Implement delete confirmation
-    console.log("Delete staff:", id);
+    deleteStaffMember.mutate(id);
   };
 
   return (
@@ -141,6 +60,12 @@ const StaffManagement: React.FC = () => {
       subtitle="Manage team members, roles, and department assignments."
     >
       <StaffHeader onSearch={handleSearch} onAddStaff={handleAddStaff} />
+      {staffQuery.isLoading && (
+        <p className="text-sm text-gray-500">Loading staff...</p>
+      )}
+      {staffQuery.isError && (
+        <p className="text-sm text-red-600">Unable to load staff.</p>
+      )}
       <StaffTable
         data={filteredStaff}
         onEdit={handleEdit}
