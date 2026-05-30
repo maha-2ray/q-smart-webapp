@@ -30,5 +30,5 @@ export const ENV = {
   isProduction: env.PROD === true,
   appName: env.VITE_APP_NAME || "QSMART WebApp",
   appVersion: env.VITE_APP_VERSION || "1.0.0",
-  apiBaseUrl: env.VITE_API_BASE_URL || "https://q-smart-65la.onrender.com/v1",
+  apiBaseUrl: env.VITE_API_BASE_URL || "https://q-smart-65la.onrender.com",
 };

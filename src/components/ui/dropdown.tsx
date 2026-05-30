@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiChevronDown, FiChevronUp, FiSettings } from "react-icons/fi";
 import { LuLogOut, LuUser } from "react-icons/lu";
+import { useLogout } from "../../hooks/use-auth";
 interface UserDropdownProps {
   userName: string;
   userTitle?: string;
@@ -16,11 +17,10 @@ const DropDown: React.FC<UserDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const logout = useLogout();
 
   const handleLogout = () => {
-    // Clear auth data
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userEmail");
+    logout();
     navigate("/login");
     setIsOpen(false);
   };

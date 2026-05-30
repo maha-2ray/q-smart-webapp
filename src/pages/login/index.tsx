@@ -1,45 +1,42 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
+import { getApiErrorMessage } from "../../libs/api/api-client";
+import { useLogin } from "../../hooks/use-auth";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const loginMutation = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const isLoading = loginMutation.isPending;
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // For demo purposes, accept any non-empty credentials
-      if (email && password) {
-        // Store auth token in localStorage
-        localStorage.setItem("authToken", "demo-token-" + Date.now());
-        localStorage.setItem("userEmail", email);
-
-        // Redirect to dashboard
-        navigate("/dashboard");
-      } else {
+      if (!email || !password) {
         setError("Please fill in all fields");
+        return;
       }
+
+      await loginMutation.mutateAsync({
+        username: email,
+        password,
+      });
+      navigate("/dashboard");
     } catch (err) {
       console.error("Sign in error:", err);
-      setError("Failed to sign in. Please try again.");
-    } finally {
-      setIsLoading(false);
+      setError(getApiErrorMessage(err));
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -148,10 +145,9 @@ const Login: React.FC = () => {
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
 
-            {/* Demo Info */}
             <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
-              <p className="font-medium mb-1">Demo Mode</p>
-              <p>Use any email and password to sign in</p>
+              <p className="font-medium mb-1">Secure sign in</p>
+              <p>Use your Q-SMART account credentials to continue.</p>
             </div>
           </form>
         </div>
@@ -161,10 +157,10 @@ const Login: React.FC = () => {
           <p className="text-gray-600 text-sm">
             Don't have an account?{" "}
             <Link
-              to="#"
+              to="/signup"
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
-              Contact support
+              Create one
             </Link>
           </p>
         </div>

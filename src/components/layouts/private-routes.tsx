@@ -2,12 +2,13 @@ import { useState } from "react";
 import NavBar from "./navbar";
 import { Outlet, Navigate } from "react-router-dom";
 import Sidebar from "./sidebar";
+import { authStorage } from "../../services/auth";
 
 const PrivateRoute = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Derive isAuthenticated from localStorage without setState
-  const isAuthenticated = !!localStorage.getItem("authToken");
+  const isAuthenticated = !!authStorage.getAccessToken();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
