@@ -4,6 +4,7 @@ import logo from "../../assets/q-smart.png";
 
 import Dropdown from "../ui/dropdown";
 import { useCurrentUser } from "../../hooks/use-auth";
+import { getNavItemsForRole, normalizeRole } from "../../constants/navigation";
 
 type NavBarProps = {
   toggleSidebar: () => void;
@@ -12,6 +13,7 @@ type NavBarProps = {
 const NavBar: React.FC<NavBarProps> = ({ toggleSidebar }) => {
   const currentUserQuery = useCurrentUser();
   const currentUser = currentUserQuery.data;
+  const role = normalizeRole(currentUser?.role);
   const displayName =
     [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") ||
     currentUser?.username ||
@@ -19,15 +21,7 @@ const NavBar: React.FC<NavBarProps> = ({ toggleSidebar }) => {
     "Profile";
   const displayRole = currentUser?.role ? String(currentUser.role) : "User";
 
-  const navItems = [
-    { name: "Queue Operations", path: "/queue-operations" },
-    { name: "Live Dashboard", path: "/dashboard" },
-    { name: "Departments", path: "/departments" },
-    { name: "Scheduling", path: "/scheduling" },
-    { name: "User Management", path: "/staff-management" },
-    // { name: "Reports", path: "/reports" },
-    // { name: "Settings", path: "/settings" },
-  ];
+  const navItems = getNavItemsForRole(role);
 
   return (
     <nav className="w-full flex items-center justify-between px-6 h-20 border-b border-gray-200 bg-card transition-colors duration-300">

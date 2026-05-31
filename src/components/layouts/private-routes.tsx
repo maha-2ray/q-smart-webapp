@@ -1,11 +1,19 @@
 import { useState } from "react";
 import NavBar from "./navbar";
-import { Outlet, Navigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "./sidebar";
 import { authStorage } from "../../services/auth";
+import { useCurrentUser } from "../../hooks/use-auth";
+import {
+  canAccessPath,
+  getDefaultPathForRole,
+  normalizeRole,
+} from "../../constants/navigation";
 
 const PrivateRoute = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+  const currentUserQuery = useCurrentUser();
 
   // Derive isAuthenticated from localStorage without setState
   const isAuthenticated = !!authStorage.getAccessToken();
@@ -16,6 +24,20 @@ const PrivateRoute = () => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (currentUserQuery.isLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center text-sm text-gray-500">
+        Loading account...
+      </div>
+    );
+  }
+
+  const role = normalizeRole(currentUserQuery.data?.role);
+
+  if (!canAccessPath(role, location.pathname)) {
+    return <Navigate to={getDefaultPathForRole(role)} replace />;
   }
 
   return (

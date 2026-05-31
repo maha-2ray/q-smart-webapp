@@ -1,15 +1,11 @@
 import { NavLink } from "react-router-dom";
+import { getNavItemsForRole, normalizeRole } from "../../constants/navigation";
+import { useCurrentUser } from "../../hooks/use-auth";
 
 const Sidebar = () => {
-  const navItems = [
-    { name: "Queue Operations", path: "/queue-operations" },
-    { name: "Live Dashboard", path: "/dashboard" },
-    { name: "Departments", path: "/departments" },
-    { name: "Scheduling", path: "/scheduling" },
-    { name: "Staff Management", path: "/staff-management" },
-    { name: "Reports", path: "/reports" },
-    { name: "Settings", path: "/settings" },
-  ];
+  const currentUserQuery = useCurrentUser();
+  const role = normalizeRole(currentUserQuery.data?.role);
+  const navItems = getNavItemsForRole(role);
 
   return (
     <aside className="w-64 h-screen bg-white flex md:hidden lg:hidden flex-col border-r border-gray-200 transition-colors duration-300 z-50">

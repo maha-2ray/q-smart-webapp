@@ -8,14 +8,12 @@ import {
   useSchedules,
   useUpdateSchedule,
 } from "../../hooks/use-scheduling";
-import { useStaff } from "../../hooks/use-staff";
 import type {
   DayOfWeek,
   Schedule as ApiSchedule,
 } from "../../services/scheduling";
 
 type ScheduleStatus = "active" | "paused";
-type Recurrence = "One-time" | "Daily" | "Weekly" | "Monthly";
 
 interface Schedule {
   id: string;
@@ -26,66 +24,63 @@ interface Schedule {
   date: string;
   startTime: string;
   endTime: string;
-  recurrence: Recurrence;
   status: ScheduleStatus;
   notes: string;
 }
 
 interface ScheduleFormData {
-  title: string;
-  department: string;
-  unit: string;
-  staff: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  recurrence: Recurrence;
-  notes: string;
+  unitId: string;
+  dayOfWeek: DayOfWeek;
+  openingTime: string;
+  closingTime: string;
+  maxCapacity: string;
 }
 
 const emptyForm: ScheduleFormData = {
-  title: "",
-  department: "",
-  unit: "",
-  staff: "",
-  date: "",
-  startTime: "",
-  endTime: "",
-  recurrence: "One-time",
-  notes: "",
+  unitId: "",
+  dayOfWeek: "MONDAY",
+  openingTime: "",
+  closingTime: "",
+  maxCapacity: "",
 };
 
-const dayNames: DayOfWeek[] = [
-  "SUNDAY",
+const dayOptions: DayOfWeek[] = [
   "MONDAY",
   "TUESDAY",
   "WEDNESDAY",
   "THURSDAY",
   "FRIDAY",
   "SATURDAY",
+  "SUNDAY",
 ];
 
-const getDayOfWeek = (date: string): DayOfWeek =>
-  dayNames[new Date(`${date}T00:00:00`).getDay()] || "MONDAY";
+const formatTime = (time: ApiSchedule["openingTime"]) => {
+  if (typeof time === "string") return time;
+
+  return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(
+    2,
+    "0",
+  )}`;
+};
+
+const toLocalTimePayload = (time: string) => {
+  const [hour = "0", minute = "0"] = time.split(":");
+
+  return {
+    hour: Number(hour),
+    minute: Number(minute),
+    second: 0,
+    nano: 0,
+  };
+};
 
 const Scheduling: React.FC = () => {
   const [formData, setFormData] = useState<ScheduleFormData>(emptyForm);
   const departmentsQuery = useDepartments();
   const unitsQuery = useUnits();
-  const staffQuery = useStaff();
   const schedulesQuery = useSchedules();
   const createSchedule = useCreateSchedule();
   const updateSchedule = useUpdateSchedule();
-
-  const availableUnits = (unitsQuery.data || []).filter(
-    (unit) => unit.departmentId === formData.department,
-  );
-  const staffMembers = (staffQuery.data?.users || []).map(
-    (staff) =>
-      [staff.firstName, staff.lastName].filter(Boolean).join(" ") ||
-      staff.username ||
-      staff.email,
-  );
 
   const apiSchedules = Array.isArray(schedulesQuery.data)
     ? schedulesQuery.data
@@ -102,11 +97,10 @@ const Scheduling: React.FC = () => {
       title: `${unit?.name || "Unit"} ${schedule.dayOfWeek}`,
       department: department?.name || "Unassigned",
       unit: unit?.name || schedule.unitId,
-      staff: "Unassigned",
+      staff: "",
       date: schedule.dayOfWeek,
-      startTime: schedule.openingTime,
-      endTime: schedule.closingTime,
-      recurrence: "Weekly",
+      startTime: formatTime(schedule.openingTime),
+      endTime: formatTime(schedule.closingTime),
       status: schedule.isActive === false ? "paused" : "active",
       notes: schedule.maxCapacity
         ? `Max capacity: ${schedule.maxCapacity}`
@@ -131,28 +125,28 @@ const Scheduling: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "department" ? { unit: "" } : {}),
     }));
   };
 
   const handleCreateSchedule = (e: React.FormEvent) => {
     e.preventDefault();
     const isValid =
-      formData.title &&
-      formData.department &&
-      formData.unit &&
-      formData.date &&
-      formData.startTime &&
-      formData.endTime;
+      formData.unitId &&
+      formData.dayOfWeek &&
+      formData.openingTime &&
+      formData.closingTime;
 
     if (!isValid) return;
 
     createSchedule.mutate(
       {
-        unitId: formData.unit,
-        dayOfWeek: getDayOfWeek(formData.date),
-        openingTime: formData.startTime,
-        closingTime: formData.endTime,
+        unitId: formData.unitId,
+        dayOfWeek: formData.dayOfWeek,
+        openingTime: toLocalTimePayload(formData.openingTime),
+        closingTime: toLocalTimePayload(formData.closingTime),
+        maxCapacity: formData.maxCapacity
+          ? Number(formData.maxCapacity)
+          : undefined,
       },
       {
         onSuccess: () => setFormData(emptyForm),
@@ -190,7 +184,7 @@ const Scheduling: React.FC = () => {
           size="md"
           iconLeft={<FiPlus />}
           onClick={() => {
-            document.getElementById("schedule-title")?.focus();
+            document.getElementById("schedule-unit")?.focus();
           }}
         />
       }
@@ -219,61 +213,24 @@ const Scheduling: React.FC = () => {
                 Create Schedule
               </h3>
               <p className="text-sm text-gray-600 mb-6">
-                Assign a staff member to a department unit and define the
-                coverage window.
+                Select a unit, day, operating window, and capacity.
               </p>
 
               <form onSubmit={handleCreateSchedule} className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Schedule Title
-                  </label>
-                  <input
-                    id="schedule-title"
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    placeholder="e.g. Morning counter coverage"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Department
+                    Unit ID
                   </label>
                   <select
-                    name="department"
-                    value={formData.department}
+                    id="schedule-unit"
+                    name="unitId"
+                    value={formData.unitId}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Select Department</option>
-                    {(departmentsQuery.data || []).map((department) => (
-                      <option key={department.id} value={department.id}>
-                        {department.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Unit
-                  </label>
-                  <select
-                    name="unit"
-                    value={formData.unit}
-                    onChange={handleChange}
-                    disabled={!formData.department}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
                     required
                   >
                     <option value="">Select Unit</option>
-                    {availableUnits.map((unit) => (
+                    {(unitsQuery.data || []).map((unit) => (
                       <option key={unit.id} value={unit.id}>
                         {unit.name}
                       </option>
@@ -283,46 +240,32 @@ const Scheduling: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Staff Member
+                    Day of Week
                   </label>
                   <select
-                    name="staff"
-                    value={formData.staff}
+                    name="dayOfWeek"
+                    value={formData.dayOfWeek}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
-                    <option value="">Select Staff</option>
-                    {staffMembers.map((staff) => (
-                      <option key={staff} value={staff}>
-                        {staff}
+                    {dayOptions.map((day) => (
+                      <option key={day} value={day}>
+                        {day}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Start
+                      Opening Time
                     </label>
                     <input
                       type="time"
-                      name="startTime"
-                      value={formData.startTime}
+                      name="openingTime"
+                      value={formData.openingTime}
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
@@ -330,12 +273,12 @@ const Scheduling: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      End
+                      Closing Time
                     </label>
                     <input
                       type="time"
-                      name="endTime"
-                      value={formData.endTime}
+                      name="closingTime"
+                      value={formData.closingTime}
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
@@ -345,32 +288,16 @@ const Scheduling: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Recurrence
+                    Max Capacity
                   </label>
-                  <select
-                    name="recurrence"
-                    value={formData.recurrence}
+                  <input
+                    type="number"
+                    name="maxCapacity"
+                    value={formData.maxCapacity}
                     onChange={handleChange}
+                    min={1}
+                    placeholder="879"
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="One-time">One-time</option>
-                    <option value="Daily">Daily</option>
-                    <option value="Weekly">Weekly</option>
-                    <option value="Monthly">Monthly</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Notes
-                  </label>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    placeholder="Coverage notes or queue rules for this block."
-                    rows={3}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 </div>
 
@@ -382,12 +309,10 @@ const Scheduling: React.FC = () => {
                   className="w-full"
                   iconLeft={<FiCalendar />}
                   disabled={
-                    !formData.title ||
-                    !formData.department ||
-                    !formData.unit ||
-                    !formData.date ||
-                    !formData.startTime ||
-                    !formData.endTime
+                    !formData.unitId ||
+                    !formData.dayOfWeek ||
+                    !formData.openingTime ||
+                    !formData.closingTime
                   }
                 />
               </form>
@@ -430,9 +355,8 @@ const Scheduling: React.FC = () => {
                         {schedule.department} / {schedule.unit}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
-                        {schedule.staff} · {schedule.date} ·{" "}
-                        {schedule.startTime} - {schedule.endTime} ·{" "}
-                        {schedule.recurrence}
+                        {schedule.date} · {schedule.startTime} -{" "}
+                        {schedule.endTime}
                       </p>
                       {schedule.notes && (
                         <p className="text-sm text-gray-500 mt-2">

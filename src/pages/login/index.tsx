@@ -3,6 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
 import { getApiErrorMessage } from "../../libs/api/api-client";
 import { useLogin } from "../../hooks/use-auth";
+import { authService } from "../../services/auth";
+import {
+  getDefaultPathForRole,
+  normalizeRole,
+} from "../../constants/navigation";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +33,8 @@ const Login: React.FC = () => {
         username,
         password,
       });
-      navigate("/dashboard");
+      const currentUser = await authService.getCurrentUser();
+      navigate(getDefaultPathForRole(normalizeRole(currentUser.role)));
     } catch (err) {
       console.error("Sign in error:", err);
       setError(getApiErrorMessage(err));
