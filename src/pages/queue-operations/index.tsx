@@ -57,15 +57,15 @@ const QueueOperations: React.FC = () => {
 
   const units = unitsQuery.data || [];
   const tickets = ticketsQuery.data?.tickets || [];
-  // const selectedUnit = units.find((unit) => unit.id === selectedUnitId);
-  const selectedDepartment = departmentsQuery.data?.find(
-    (department) => department.id === selectedUnit?.departmentId,
-  );
 
   const effectiveSelectedUnitId = selectedUnitId || units[0]?.id || "";
 
   const selectedUnit = units.find(
     (unit) => unit.id === effectiveSelectedUnitId,
+  );
+
+  const selectedDepartment = departmentsQuery.data?.find(
+    (department) => department.id === selectedUnit?.departmentId,
   );
 
   const selectedUnitTickets = tickets.filter(
