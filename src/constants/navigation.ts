@@ -6,31 +6,51 @@ export interface AppNavItem {
   allowedRoles: AuthRole[];
 }
 
+const operatorRoles: AuthRole[] = ["STAFF", "ADMIN", "SUPER_ADMIN"];
+
+export const customerNavItems: AppNavItem[] = [
+  {
+    name: "Current Tickets",
+    path: "/customer/current-tickets",
+    allowedRoles: ["USER"],
+  },
+  {
+    name: "Previously Booked",
+    path: "/customer/previous-tickets",
+    allowedRoles: ["USER"],
+  },
+  {
+    name: "Book Ticket",
+    path: "/customer",
+    allowedRoles: ["USER"],
+  },
+];
+
 export const appNavItems: AppNavItem[] = [
   {
     name: "Book Ticket",
     path: "/customer",
-    allowedRoles: ["USER", "STAFF", "ADMIN", "SUPER_ADMIN"],
+    allowedRoles: operatorRoles,
   },
   {
     name: "Queue Operations",
     path: "/queue-operations",
-    allowedRoles: ["STAFF", "ADMIN", "SUPER_ADMIN"],
+    allowedRoles: operatorRoles,
   },
   {
     name: "Live Dashboard",
     path: "/dashboard",
-    allowedRoles: ["STAFF", "ADMIN", "SUPER_ADMIN"],
+    allowedRoles: operatorRoles,
   },
   {
     name: "Departments",
     path: "/departments",
-    allowedRoles: ["STAFF", "ADMIN", "SUPER_ADMIN"],
+    allowedRoles: operatorRoles,
   },
   {
     name: "Scheduling",
     path: "/scheduling",
-    allowedRoles: ["STAFF", "ADMIN", "SUPER_ADMIN"],
+    allowedRoles: operatorRoles,
   },
   {
     name: "User Management",
@@ -59,13 +79,26 @@ export const normalizeRole = (role?: AuthRole | string): AuthRole | null => {
   return null;
 };
 
+const protectedPathItems: AppNavItem[] = [
+  ...appNavItems,
+  ...customerNavItems,
+  {
+    name: "Profile",
+    path: "/profile",
+    allowedRoles: ["STAFF", "ADMIN", "SUPER_ADMIN"],
+  },
+];
+
+const pathMatches = (path: string, allowedPath: string) =>
+  path === allowedPath || path.startsWith(`${allowedPath}/`);
+
 export const canAccessPath = (role: AuthRole | null, path: string) => {
   if (!role) return false;
 
-  if (path === "/profile") return true;
+  if (role === "SUPER_ADMIN") return true;
 
-  return appNavItems.some(
-    (item) => item.path === path && item.allowedRoles.includes(role),
+  return protectedPathItems.some(
+    (item) => pathMatches(path, item.path) && item.allowedRoles.includes(role),
   );
 };
 
@@ -73,4 +106,8 @@ export const getDefaultPathForRole = (role: AuthRole | null) =>
   role ? defaultPathByRole[role] : "/login";
 
 export const getNavItemsForRole = (role: AuthRole | null) =>
-  role ? appNavItems.filter((item) => item.allowedRoles.includes(role)) : [];
+  role
+    ? [...appNavItems, ...customerNavItems].filter((item) =>
+        item.allowedRoles.includes(role),
+      )
+    : [];

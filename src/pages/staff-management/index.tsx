@@ -2,11 +2,16 @@ import { PageLayout } from "../../components/layouts/page-layout";
 import React, { useState, useMemo } from "react";
 import { StaffHeader, StaffTable } from "./components";
 import type { StaffMember } from "./components";
-import { useDeleteStaffMember, useStaff } from "../../hooks/use-staff";
+import {
+  useApproveStaffMember,
+  useDeleteStaffMember,
+  useStaff,
+} from "../../hooks/use-staff";
 
 const StaffManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const staffQuery = useStaff();
+  const approveStaffMember = useApproveStaffMember();
   const deleteStaffMember = useDeleteStaffMember();
 
   const staffData: StaffMember[] = useMemo(
@@ -46,8 +51,7 @@ const StaffManagement: React.FC = () => {
   };
 
   const handleEdit = (staff: StaffMember) => {
-    // TODO: Implement edit staff modal
-    console.log("Edit staff:", staff);
+    approveStaffMember.mutate(staff.id);
   };
 
   const handleDelete = (id: string) => {
@@ -70,6 +74,11 @@ const StaffManagement: React.FC = () => {
         data={filteredStaff}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        approvingStaffId={
+          approveStaffMember.isPending
+            ? String(approveStaffMember.variables)
+            : undefined
+        }
       />
     </PageLayout>
   );
