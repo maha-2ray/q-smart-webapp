@@ -63,15 +63,10 @@ const formatTime = (time: ApiSchedule["openingTime"]) => {
   )}`;
 };
 
-const toLocalTimePayload = (time: string) => {
+const toApiTimeString = (time: string) => {
   const [hour = "0", minute = "0"] = time.split(":");
 
-  return {
-    hour: Number(hour),
-    minute: Number(minute),
-    second: 0,
-    nano: 0,
-  };
+  return `${Number(hour)}:${minute.padStart(2, "0")}`;
 };
 
 const Scheduling: React.FC = () => {
@@ -142,8 +137,8 @@ const Scheduling: React.FC = () => {
       {
         unitId: formData.unitId,
         dayOfWeek: formData.dayOfWeek,
-        openingTime: toLocalTimePayload(formData.openingTime),
-        closingTime: toLocalTimePayload(formData.closingTime),
+        openingTime: toApiTimeString(formData.openingTime),
+        closingTime: toApiTimeString(formData.closingTime),
         maxCapacity: formData.maxCapacity
           ? Number(formData.maxCapacity)
           : undefined,

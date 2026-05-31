@@ -29,14 +29,14 @@ export interface Schedule {
 export interface ScheduleRequest {
   unitId: string;
   dayOfWeek: DayOfWeek;
-  openingTime: LocalTimePayload;
-  closingTime: LocalTimePayload;
+  openingTime: string;
+  closingTime: string;
   maxCapacity?: number;
 }
 
 export interface UpdateScheduleRequest {
-  openingTime?: LocalTimePayload;
-  closingTime?: LocalTimePayload;
+  openingTime?: string;
+  closingTime?: string;
   maxCapacity?: number;
   isActive?: boolean;
 }
