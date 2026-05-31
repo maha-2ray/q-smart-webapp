@@ -7,14 +7,22 @@ type UnitOption = {
   name: string;
 };
 
+type DepartmentOption = {
+  id: string;
+  name: string;
+};
+
 type QueueControlProps = {
   departmentName: string;
   numberWaiting: number;
   avgWaitTime: number;
+  departments?: DepartmentOption[];
   units?: UnitOption[];
+  selectedDepartmentId?: string;
   selectedUnitId?: string;
   isCallingNext?: boolean;
   callNextDisabled?: boolean;
+  onDepartmentChange?: (departmentId: string) => void;
   onUnitChange?: (unitId: string) => void;
   onCallNext?: () => void;
 };
@@ -23,10 +31,13 @@ const QueueControl: React.FC<QueueControlProps> = ({
   departmentName,
   numberWaiting,
   avgWaitTime,
+  departments = [],
   units = [],
+  selectedDepartmentId = "",
   selectedUnitId = "",
   isCallingNext = false,
   callNextDisabled = false,
+  onDepartmentChange,
   onUnitChange,
   onCallNext,
 }) => {
@@ -39,6 +50,28 @@ const QueueControl: React.FC<QueueControlProps> = ({
           DEPT: {departmentName}
         </span>
       </div>
+
+      <label className="block mb-4">
+        <span className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+          Department
+        </span>
+        <select
+          value={selectedDepartmentId}
+          onChange={(event) => onDepartmentChange?.(event.target.value)}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          disabled={departments.length === 0 || isCallingNext}
+        >
+          {departments.length === 0 ? (
+            <option value="">No departments available</option>
+          ) : (
+            departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))
+          )}
+        </select>
+      </label>
 
       <label className="block mb-5">
         <span className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">

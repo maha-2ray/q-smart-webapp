@@ -46,6 +46,7 @@ const activeServingStatuses = new Set(["CALLED", "SERVING"]);
 
 const QueueOperations: React.FC = () => {
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const departmentsQuery = useDepartments();
   const unitsQuery = useUnits();
@@ -56,16 +57,48 @@ const QueueOperations: React.FC = () => {
   const updateTicket = useUpdateTicket();
 
   const units = unitsQuery.data || [];
+  const departments = departmentsQuery.data || [];
   const tickets = ticketsQuery.data?.tickets || [];
 
-  const effectiveSelectedUnitId = selectedUnitId || units[0]?.id || "";
+  const effectiveSelectedDepartmentId =
+    selectedDepartmentId || departments[0]?.id || "";
 
-  const selectedUnit = units.find(
-    (unit) => unit.id === effectiveSelectedUnitId,
+  // const effectiveSelectedUnitId =
+  //   selectedUnitId ||
+  //   units.find((unit) => unit.departmentId === effectiveSelectedDepartmentId)?.id ||
+  //   "";
+
+  const filteredUnits = useMemo(
+    () =>
+      units.filter(
+        (unit) => unit.departmentId === effectiveSelectedDepartmentId,
+      ),
+    [effectiveSelectedDepartmentId, units],
   );
 
-  const selectedDepartment = departmentsQuery.data?.find(
-    (department) => department.id === selectedUnit?.departmentId,
+  const effectiveSelectedUnitId = filteredUnits.some(
+    (unit) => unit.id === selectedUnitId,
+  )
+    ? selectedUnitId
+    : filteredUnits[0]?.id || "";
+
+  // useEffect(() => {
+  //   if (!selectedDepartmentId) {
+  //     if (selectedUnitId) setSelectedUnitId("");
+  //     return;
+  //   }
+
+  //   const selectedUnitBelongsToDepartment = filteredUnits.some(
+  //     (unit) => unit.id === selectedUnitId,
+  //   );
+
+  //   if (!selectedUnitBelongsToDepartment) {
+  //     setSelectedUnitId(filteredUnits[0]?.id || "");
+  //   }
+  // }, [filteredUnits, selectedDepartmentId, selectedUnitId]);
+
+  const selectedDepartment = departments.find(
+    (department) => department.id === effectiveSelectedDepartmentId,
   );
 
   const selectedUnitTickets = tickets.filter(
@@ -73,13 +106,14 @@ const QueueOperations: React.FC = () => {
   );
 
   const waitingTickets = tickets.filter(
-    (ticket) => ticket.unitId === selectedUnitId && ticket.status === "WAITING",
+    (ticket) =>
+      ticket.unitId === effectiveSelectedUnitId && ticket.status === "WAITING",
   );
 
   const calledTicket = callNext.data;
   const currentlyServing =
     calledTicket &&
-    calledTicket.unitId === selectedUnitId &&
+    calledTicket.unitId === effectiveSelectedUnitId &&
     activeServingStatuses.has(String(calledTicket.status).toUpperCase())
       ? calledTicket
       : selectedUnitTickets.find((ticket) =>
@@ -88,17 +122,20 @@ const QueueOperations: React.FC = () => {
 
   const unitOptions = useMemo(
     () =>
-      units.map((unit) => {
-        const department = departmentsQuery.data?.find(
-          (item) => item.id === unit.departmentId,
-        );
+      filteredUnits.map((unit) => ({
+        id: unit.id,
+        name: unit.name,
+      })),
+    [filteredUnits],
+  );
 
-        return {
-          id: unit.id,
-          name: department ? `${department.name} / ${unit.name}` : unit.name,
-        };
-      }),
-    [departmentsQuery.data, units],
+  const queueDepartmentOptions = useMemo(
+    () =>
+      departments.map((department) => ({
+        id: department.id,
+        name: department.name,
+      })),
+    [departments],
   );
 
   const departmentOptions: DepartmentOption[] = useMemo(
@@ -141,16 +178,23 @@ const QueueOperations: React.FC = () => {
         <div className="grid grid-cols-[1fr_3fr] gap-6">
           <div className="grid grid-rows-[2fr_3fr] gap-6">
             <QueueControl
-              departmentName={selectedDepartment?.name || "Select unit"}
+              departmentName={selectedDepartment?.name || "Select department"}
               numberWaiting={waitingTickets.length}
               avgWaitTime={0}
+              departments={queueDepartmentOptions}
               units={unitOptions}
-              selectedUnitId={selectedUnitId}
+              selectedDepartmentId={effectiveSelectedDepartmentId}
+              selectedUnitId={effectiveSelectedUnitId}
               isCallingNext={callNext.isPending}
-              callNextDisabled={!selectedUnitId}
+              callNextDisabled={!effectiveSelectedUnitId}
+              onDepartmentChange={(departmentId) => {
+                setSelectedDepartmentId(departmentId);
+                setSelectedUnitId("");
+              }}
               onUnitChange={setSelectedUnitId}
               onCallNext={() =>
-                selectedUnitId && callNext.mutate(selectedUnitId)
+                effectiveSelectedUnitId &&
+                callNext.mutate(effectiveSelectedUnitId)
               }
             />
             <CurrentlyServing
