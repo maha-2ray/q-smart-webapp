@@ -3,20 +3,30 @@ import { NavLink } from "react-router-dom";
 import logo from "../../assets/q-smart.png";
 
 import Dropdown from "../ui/dropdown";
+import { useCurrentUser } from "../../hooks/use-auth";
 
 type NavBarProps = {
   toggleSidebar: () => void;
 };
 
 const NavBar: React.FC<NavBarProps> = ({ toggleSidebar }) => {
+  const currentUserQuery = useCurrentUser();
+  const currentUser = currentUserQuery.data;
+  const displayName =
+    [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") ||
+    currentUser?.username ||
+    currentUser?.email ||
+    "Profile";
+  const displayRole = currentUser?.role ? String(currentUser.role) : "User";
+
   const navItems = [
     { name: "Queue Operations", path: "/queue-operations" },
     { name: "Live Dashboard", path: "/dashboard" },
     { name: "Departments", path: "/departments" },
     { name: "Scheduling", path: "/scheduling" },
     { name: "User Management", path: "/staff-management" },
-    { name: "Reports", path: "/reports" },
-    { name: "Settings", path: "/settings" },
+    // { name: "Reports", path: "/reports" },
+    // { name: "Settings", path: "/settings" },
   ];
 
   return (
@@ -53,11 +63,7 @@ const NavBar: React.FC<NavBarProps> = ({ toggleSidebar }) => {
           </ul>
         </div>
       </div>
-      <Dropdown
-        userName="GTBank Limited"
-        userTitle="Administrator"
-        userAvatar="https://i.pravatar.cc/300"
-      />
+      <Dropdown userName={displayName} userTitle={displayRole} />
     </nav>
   );
 };

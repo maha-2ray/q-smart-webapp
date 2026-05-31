@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiChevronDown, FiChevronUp, FiSettings } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { LuLogOut, LuUser } from "react-icons/lu";
 import { useLogout } from "../../hooks/use-auth";
 interface UserDropdownProps {
@@ -25,10 +25,10 @@ const DropDown: React.FC<UserDropdownProps> = ({
     setIsOpen(false);
   };
 
-  const handleSettings = () => {
-    navigate("/settings");
-    setIsOpen(false);
-  };
+  // const handleSettings = () => {
+  //   navigate("/settings");
+  //   setIsOpen(false);
+  // };
 
   const handleProfile = () => {
     navigate("/profile");
@@ -102,7 +102,7 @@ const DropDown: React.FC<UserDropdownProps> = ({
           </button>
 
           {/* Settings Option */}
-          <button
+          {/* <button
             onClick={handleSettings}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
           >
@@ -110,7 +110,7 @@ const DropDown: React.FC<UserDropdownProps> = ({
             <span className="text-sm text-gray-900 dark:text-white">
               Settings
             </span>
-          </button>
+          </button> */}
 
           {/* Logout Option */}
           <button

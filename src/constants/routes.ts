@@ -16,6 +16,7 @@ const Scheduling = lazyWithReload(() => import("../pages/scheduling"));
 const StaffManagement = lazyWithReload(
   () => import("../pages/staff-management"),
 );
+const Profile = lazyWithReload(() => import("../pages/profile"));
 
 export interface RouteConfig {
   path: string;
@@ -94,6 +95,13 @@ export const routes: RouteConfig[] = [
   {
     path: "/scheduling",
     component: Scheduling as React.LazyExoticComponent<
+      React.ComponentType<unknown>
+    >,
+    protected: true,
+  },
+  {
+    path: "/profile",
+    component: Profile as React.LazyExoticComponent<
       React.ComponentType<unknown>
     >,
     protected: true,
