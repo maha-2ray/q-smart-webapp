@@ -56,7 +56,7 @@ const StaffManagement: React.FC = () => {
 
   return (
     <PageLayout
-      title="Staff Management"
+      title="User Management"
       subtitle="Manage team members, roles, and department assignments."
     >
       <StaffHeader onSearch={handleSearch} onAddStaff={handleAddStaff} />
@@ -64,7 +64,7 @@ const StaffManagement: React.FC = () => {
         <p className="text-sm text-gray-500">Loading staff...</p>
       )}
       {staffQuery.isError && (
-        <p className="text-sm text-red-600">Unable to load staff.</p>
+        <p className="text-sm text-red-600">Unable to load users.</p>
       )}
       <StaffTable
         data={filteredStaff}

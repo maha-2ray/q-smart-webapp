@@ -10,8 +10,8 @@ const Departments = lazyWithReload(() => import("../pages/departments"));
 const QueueOperations = lazyWithReload(
   () => import("../pages/queue-operations"),
 );
-const Reports = lazyWithReload(() => import("../pages/reports"));
-const Settings = lazyWithReload(() => import("../pages/settings"));
+// const Reports = lazyWithReload(() => import("../pages/reports"));
+// const Settings = lazyWithReload(() => import("../pages/settings"));
 const Scheduling = lazyWithReload(() => import("../pages/scheduling"));
 const StaffManagement = lazyWithReload(
   () => import("../pages/staff-management"),
@@ -70,20 +70,20 @@ export const routes: RouteConfig[] = [
     >,
     protected: true,
   },
-  {
-    path: "/reports",
-    component: Reports as React.LazyExoticComponent<
-      React.ComponentType<unknown>
-    >,
-    protected: true,
-  },
-  {
-    path: "/settings",
-    component: Settings as React.LazyExoticComponent<
-      React.ComponentType<unknown>
-    >,
-    protected: true,
-  },
+  // {
+  //   path: "/reports",
+  //   component: Reports as React.LazyExoticComponent<
+  //     React.ComponentType<unknown>
+  //   >,
+  //   protected: true,
+  // },
+  // {
+  //   path: "/settings",
+  //   component: Settings as React.LazyExoticComponent<
+  //     React.ComponentType<unknown>
+  //   >,
+  //   protected: true,
+  // },
   {
     path: "/staff-management",
     component: StaffManagement as React.LazyExoticComponent<
