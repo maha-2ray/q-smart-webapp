@@ -42,8 +42,11 @@ const mapTicketStatus = (status: string): QueueEntry["status"] => {
   return "Waiting";
 };
 
+const activeServingStatuses = new Set(["CALLED", "SERVING"]);
+
 const QueueOperations: React.FC = () => {
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState("");
   const departmentsQuery = useDepartments();
   const unitsQuery = useUnits();
   const ticketsQuery = useTickets({ pageNumber: 0, pageSize: 50 });
@@ -52,21 +55,55 @@ const QueueOperations: React.FC = () => {
   const completeTicket = useCompleteTicket();
   const updateTicket = useUpdateTicket();
 
+  const units = unitsQuery.data || [];
   const tickets = ticketsQuery.data?.tickets || [];
-  const selectedUnit = unitsQuery.data?.[0];
+  // const selectedUnit = units.find((unit) => unit.id === selectedUnitId);
   const selectedDepartment = departmentsQuery.data?.find(
     (department) => department.id === selectedUnit?.departmentId,
   );
-  const waitingTickets = tickets.filter(
-    (ticket) => ticket.status === "WAITING",
+
+  const effectiveSelectedUnitId = selectedUnitId || units[0]?.id || "";
+
+  const selectedUnit = units.find(
+    (unit) => unit.id === effectiveSelectedUnitId,
   );
+
+  const selectedUnitTickets = tickets.filter(
+    (ticket) => ticket.unitId === effectiveSelectedUnitId,
+  );
+
+  const waitingTickets = tickets.filter(
+    (ticket) => ticket.unitId === selectedUnitId && ticket.status === "WAITING",
+  );
+
+  const calledTicket = callNext.data;
   const currentlyServing =
-    tickets.find((ticket) => ticket.status === "CALLED") ||
-    tickets.find((ticket) => ticket.status === "SERVING");
+    calledTicket &&
+    calledTicket.unitId === selectedUnitId &&
+    activeServingStatuses.has(String(calledTicket.status).toUpperCase())
+      ? calledTicket
+      : selectedUnitTickets.find((ticket) =>
+          activeServingStatuses.has(String(ticket.status).toUpperCase()),
+        );
+
+  const unitOptions = useMemo(
+    () =>
+      units.map((unit) => {
+        const department = departmentsQuery.data?.find(
+          (item) => item.id === unit.departmentId,
+        );
+
+        return {
+          id: unit.id,
+          name: department ? `${department.name} / ${unit.name}` : unit.name,
+        };
+      }),
+    [departmentsQuery.data, units],
+  );
 
   const departmentOptions: DepartmentOption[] = useMemo(
     () =>
-      (unitsQuery.data || []).map((unit, index) => {
+      units.map((unit, index) => {
         const department = departmentsQuery.data?.find(
           (item) => item.id === unit.departmentId,
         );
@@ -82,16 +119,18 @@ const QueueOperations: React.FC = () => {
           ).length,
         };
       }),
-    [departmentsQuery.data, tickets, unitsQuery.data],
+    [departmentsQuery.data, tickets, units],
   );
 
-  const tableData: QueueEntry[] = tickets.map((ticket: QueueTicket) => ({
-    ticket: ticket.ticketNumber,
-    customerName: ticket.customerName,
-    waitTime: getWaitMinutes(ticket.issuedAt || ticket.createdAt),
-    joinedAt: formatTime(ticket.issuedAt || ticket.createdAt),
-    status: mapTicketStatus(ticket.status),
-  }));
+  const tableData: QueueEntry[] = selectedUnitTickets.map(
+    (ticket: QueueTicket) => ({
+      ticket: ticket.ticketNumber,
+      customerName: ticket.customerName,
+      waitTime: getWaitMinutes(ticket.issuedAt || ticket.createdAt),
+      joinedAt: formatTime(ticket.issuedAt || ticket.createdAt),
+      status: mapTicketStatus(ticket.status),
+    }),
+  );
 
   return (
     <>
@@ -102,11 +141,16 @@ const QueueOperations: React.FC = () => {
         <div className="grid grid-cols-[1fr_3fr] gap-6">
           <div className="grid grid-rows-[2fr_3fr] gap-6">
             <QueueControl
-              departmentName={selectedDepartment?.name || "All"}
+              departmentName={selectedDepartment?.name || "Select unit"}
               numberWaiting={waitingTickets.length}
               avgWaitTime={0}
+              units={unitOptions}
+              selectedUnitId={selectedUnitId}
+              isCallingNext={callNext.isPending}
+              callNextDisabled={!selectedUnitId}
+              onUnitChange={setSelectedUnitId}
               onCallNext={() =>
-                selectedUnit && callNext.mutate(selectedUnit.id)
+                selectedUnitId && callNext.mutate(selectedUnitId)
               }
             />
             <CurrentlyServing
@@ -116,14 +160,22 @@ const QueueOperations: React.FC = () => {
               }
               holderPhoneNumber={currentlyServing?.customerPhone || "-"}
               onServed={() =>
-                currentlyServing && completeTicket.mutate(currentlyServing.id)
+                currentlyServing &&
+                completeTicket.mutate(currentlyServing.id, {
+                  onSuccess: () => callNext.reset(),
+                })
               }
               onNoShow={() =>
                 currentlyServing &&
-                updateTicket.mutate({
-                  id: currentlyServing.id,
-                  payload: { status: "NO_SHOW" },
-                })
+                updateTicket.mutate(
+                  {
+                    id: currentlyServing.id,
+                    payload: { status: "NO_SHOW" },
+                  },
+                  {
+                    onSuccess: () => callNext.reset(),
+                  },
+                )
               }
               onRecall={() =>
                 currentlyServing &&

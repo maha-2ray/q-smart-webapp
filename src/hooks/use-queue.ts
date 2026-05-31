@@ -2,16 +2,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queueService } from "../services/queue";
 import type {
   CreateTicketRequest,
+  QueueTicket,
   QueueTicketStatus,
   TicketListParams,
+  TicketListResponse,
   UpdateTicketRequest,
 } from "../services/queue";
 import type { EntityId } from "../services/shared";
 
 export const queueQueryKeys = {
   all: ["tickets"] as const,
+  lists: () => [...queueQueryKeys.all, "list"] as const,
   list: (params?: TicketListParams) =>
-    [...queueQueryKeys.all, "list", params] as const,
+    [...queueQueryKeys.lists(), params] as const,
+  myTickets: () => [...queueQueryKeys.all, "my-tickets"] as const,
   unit: (unitId: EntityId) => [...queueQueryKeys.all, "unit", unitId] as const,
   unitStatus: (unitId: EntityId, status: QueueTicketStatus) =>
     [...queueQueryKeys.unit(unitId), "status", status] as const,
@@ -28,6 +32,13 @@ export const useTickets = (params?: TicketListParams) =>
   useQuery({
     queryKey: queueQueryKeys.list(params),
     queryFn: () => queueService.getTickets(params),
+  });
+
+export const useMyTickets = (enabled = true) =>
+  useQuery({
+    queryKey: queueQueryKeys.myTickets(),
+    queryFn: queueService.getMyTickets,
+    enabled,
   });
 
 export const useTicketsByUnit = (unitId: EntityId, enabled = true) =>
@@ -104,8 +115,45 @@ export const useUpdateTicket = () =>
       queueService.updateTicket(id, payload),
   );
 
-export const useCallNext = () =>
-  useQueueMutation((unitId: EntityId) => queueService.callNext(unitId));
+const upsertTicket = (tickets: QueueTicket[], nextTicket: QueueTicket) => {
+  const existingIndex = tickets.findIndex(
+    (ticket) => ticket.id === nextTicket.id,
+  );
+
+  if (existingIndex === -1) {
+    return [nextTicket, ...tickets];
+  }
+
+  return tickets.map((ticket, index) =>
+    index === existingIndex ? nextTicket : ticket,
+  );
+};
+
+export const useCallNext = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (unitId: EntityId) => queueService.callNext(unitId),
+    onSuccess: (ticket) => {
+      queryClient.setQueryData(queueQueryKeys.ticket(ticket.id), ticket);
+      queryClient.setQueriesData<TicketListResponse>(
+        { queryKey: queueQueryKeys.lists() },
+        (previous) =>
+          previous
+            ? {
+                ...previous,
+                tickets: upsertTicket(previous.tickets, ticket),
+              }
+            : previous,
+      );
+      queryClient.setQueryData<QueueTicket[]>(
+        queueQueryKeys.unit(ticket.unitId),
+        (previous) => (previous ? upsertTicket(previous, ticket) : previous),
+      );
+      queryClient.invalidateQueries({ queryKey: queueQueryKeys.all });
+    },
+  });
+};
 
 export const useCompleteTicket = () =>
   useQueueMutation((id: EntityId) => queueService.completeTicket(id));

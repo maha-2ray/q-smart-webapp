@@ -12,7 +12,7 @@ import { useUnits } from "../../hooks/use-departments";
 import {
   useCancelTicket,
   useCreateTicket,
-  useTickets,
+  useMyTickets,
 } from "../../hooks/use-queue";
 import type { QueueTicket } from "../../services/queue";
 import { useCurrentUser } from "../../hooks/use-auth";
@@ -52,19 +52,6 @@ const formatTicketDate = (ticket: QueueTicket) => {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(dateValue));
-};
-
-const normalizeValue = (value?: string) => value?.trim().toLowerCase() || "";
-
-const isTicketOwnedByCustomer = (
-  ticket: QueueTicket,
-  customerEmail?: string,
-) => {
-  const normalizedCustomerEmail = normalizeValue(customerEmail);
-
-  if (!normalizedCustomerEmail) return false;
-
-  return normalizeValue(ticket.customerEmail) === normalizedCustomerEmail;
 };
 
 const TicketList: React.FC<{
@@ -171,13 +158,15 @@ const Customer: React.FC = () => {
   const [ticket, setTicket] = useState<QueueTicket | null>(null);
   const currentUserQuery = useCurrentUser();
   const unitsQuery = useUnits();
-  const ticketsQuery = useTickets({ pageNumber: 0, pageSize: 50 });
+  const isCurrentTicketsView = location.pathname.endsWith("/current-tickets");
+  const isPreviousTicketsView = location.pathname.endsWith("/previous-tickets");
+  const myTicketsQuery = useMyTickets(
+    isCurrentTicketsView || isPreviousTicketsView,
+  );
   const createTicket = useCreateTicket();
   const cancelTicket = useCancelTicket();
 
-  const isCurrentTicketsView = location.pathname.endsWith("/current-tickets");
-  const isPreviousTicketsView = location.pathname.endsWith("/previous-tickets");
-  const isLoadingTickets = ticketsQuery.isLoading || currentUserQuery.isLoading;
+  const isLoadingTickets = myTicketsQuery.isLoading;
 
   const services: Service[] = (unitsQuery.data || []).map((unit) => ({
     id: unit.id,
@@ -185,13 +174,7 @@ const Customer: React.FC = () => {
     waitTime: "-",
   }));
 
-  const tickets = useMemo(
-    () =>
-      (ticketsQuery.data?.tickets || []).filter((queueTicket) =>
-        isTicketOwnedByCustomer(queueTicket, currentUserQuery.data?.email),
-      ),
-    [currentUserQuery.data?.email, ticketsQuery.data?.tickets],
-  );
+  const tickets = myTicketsQuery.data || [];
   const currentTickets = useMemo(
     () =>
       tickets.filter((queueTicket) =>
@@ -277,7 +260,7 @@ const Customer: React.FC = () => {
         emptyMessage="You do not have any active tickets right now."
         tickets={currentTickets}
         isLoading={isLoadingTickets}
-        isError={ticketsQuery.isError}
+        isError={myTicketsQuery.isError}
       />
     );
   }
@@ -289,7 +272,7 @@ const Customer: React.FC = () => {
         emptyMessage="You do not have any previous tickets yet."
         tickets={previousTickets}
         isLoading={isLoadingTickets}
-        isError={ticketsQuery.isError}
+        isError={myTicketsQuery.isError}
       />
     );
   }

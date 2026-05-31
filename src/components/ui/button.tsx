@@ -1,5 +1,4 @@
 import React from "react";
-import ClipLoader from "react-spinners/ClipLoader";
 
 import { cn } from "../../libs/utils";
 
@@ -92,7 +91,10 @@ export const Button: React.FC<ButtonProps> = React.memo(
 
         {loading && (
           <span className="flex items-center" role="status" aria-live="polite">
-            <ClipLoader size={15} color="white" aria-hidden="true" />
+            <span
+              className="h-4 w-4 animate-spin rounded-full border-2 border-current border-b-transparent"
+              aria-hidden="true"
+            />
             <span className="sr-only">Loading...</span>
           </span>
         )}
