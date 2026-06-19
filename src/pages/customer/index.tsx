@@ -33,6 +33,7 @@ interface CustomerData {
   fullName: string;
   mobileNumber: string;
   notification: "sms" | "browser";
+  serviceType: string;
 }
 
 const currentTicketStatuses = new Set(["WAITING", "CALLED", "SERVING"]);
@@ -197,16 +198,12 @@ const Customer: React.FC = () => {
 
   const handleServiceSelect = (data: {
     serviceId: string;
-    name: string;
-    mobileNumber: string;
-    notification: "sms" | "browser";
+    serviceType: string;
   }) => {
     setCustomerData((prev) => ({
       ...prev,
       serviceId: data.serviceId,
-      fullName: data.name,
-      mobileNumber: data.mobileNumber,
-      notification: data.notification,
+      serviceType: data.serviceType,
     }));
     setCurrentStep("details");
   };
@@ -231,6 +228,7 @@ const Customer: React.FC = () => {
         customerName: data.name,
         customerPhone: data.phone,
         customerEmail: currentUserQuery.data?.email,
+        serviceType: customerData.serviceType,
       },
       {
         onSuccess: (createdTicket) => {
@@ -303,7 +301,7 @@ const Customer: React.FC = () => {
 
       {currentStep === "details" && selectedService && (
         <YourDetails
-          serviceName={selectedService.name}
+          serviceType={selectedService.name}
           initialName={customerData.fullName || ""}
           initialPhone={customerData.mobileNumber || ""}
           initialNotification={customerData.notification || "browser"}

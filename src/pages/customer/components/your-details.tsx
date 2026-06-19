@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { FiBell } from "react-icons/fi";
+import { FiBell, FiMessageSquare } from "react-icons/fi";
 import { LuArrowLeft } from "react-icons/lu";
 
 interface YourDetailsProps {
-  serviceName: string;
+  serviceType: string;
   initialName: string;
   initialPhone: string;
   initialNotification: "sms" | "browser";
@@ -16,7 +16,7 @@ interface YourDetailsProps {
 }
 
 export const YourDetails: React.FC<YourDetailsProps> = ({
-  serviceName,
+  serviceType,
   initialName,
   initialPhone,
   initialNotification,
@@ -62,7 +62,7 @@ export const YourDetails: React.FC<YourDetailsProps> = ({
             Your Details
           </h1>
           <p className="text-gray-600">
-            You selected {serviceName}. How should we reach you?
+            You selected {serviceType}. How should we reach you?
           </p>
         </div>
 
@@ -112,13 +112,15 @@ export const YourDetails: React.FC<YourDetailsProps> = ({
               {/* SMS Option */}
               <button
                 onClick={() => setNotification("sms")}
-                className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${
                   notification === "sms"
-                    ? "border-gray-300 bg-gray-50"
+                    ? "border-blue-900 bg-white"
                     : "border-gray-200 hover:border-gray-400"
                 }`}
               >
-                <div className="text-2xl">📱</div>
+                <div className="text-2xl">
+                  <FiMessageSquare />
+                </div>
                 <span className="text-gray-900 font-medium">
                   Text Message (SMS)
                 </span>
@@ -140,20 +142,14 @@ export const YourDetails: React.FC<YourDetailsProps> = ({
                 onClick={() => setNotification("browser")}
                 className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
                   notification === "browser"
-                    ? "border-blue-900 bg-blue-900"
+                    ? "border-blue-900 bg-white"
                     : "border-gray-200 hover:border-gray-400"
                 }`}
               >
-                <div
-                  className={`text-2xl ${notification === "browser" ? "text-white" : ""}`}
-                >
+                <div className="text-2xl">
                   <FiBell />
                 </div>
-                <span
-                  className={`font-medium ${
-                    notification === "browser" ? "text-white" : "text-gray-900"
-                  }`}
-                >
+                <span className="text-gray-900 font-medium">
                   Browser Notification
                 </span>
                 <div

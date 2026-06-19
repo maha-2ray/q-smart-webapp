@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { FiBell } from "react-icons/fi";
-import { MdOutlineMessage } from "react-icons/md";
 
 import { LuClock } from "react-icons/lu";
 
@@ -15,9 +13,7 @@ interface ServiceSelectProps {
   services: Service[];
   onSelectService: (serviceData: {
     serviceId: string;
-    name: string;
-    mobileNumber: string;
-    notification: "sms" | "browser";
+    serviceType: string;
   }) => void;
 }
 
@@ -28,10 +24,9 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     services[0]?.id ?? null,
   );
-  const [fullName, setFullName] = useState("");
-  const [mobileNumber, setMobileNumber] = useState("");
-  const [notification, setNotification] = useState<"sms" | "browser">(
-    "browser",
+
+  const [selectedServiceType, setSelectedServiceType] = useState<string | null>(
+    services[0]?.name ?? null,
   );
 
   const effectiveSelectedServiceId =
@@ -41,19 +36,14 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
     (s) => s.id === effectiveSelectedServiceId,
   );
 
-  // useEffect(() => {
-  //   if (!selectedServiceId && services.length > 0) {
-  //     setSelectedServiceId(services[0].id);
-  //   }
-  // }, [selectedServiceId, services]);
+  const effectiveSelectedServiceType =
+    selectedServiceType ?? services[0]?.name ?? null;
 
   const handleSubmit = () => {
-    if (effectiveSelectedServiceId && fullName && mobileNumber) {
+    if (effectiveSelectedServiceId) {
       onSelectService({
         serviceId: effectiveSelectedServiceId,
-        name: fullName,
-        mobileNumber,
-        notification,
+        serviceType: effectiveSelectedServiceType,
       });
     }
   };
@@ -82,7 +72,10 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
           {services.map((service) => (
             <button
               key={service.id}
-              onClick={() => setSelectedServiceId(service.id)}
+              onClick={() => {
+                setSelectedServiceId(service.id);
+                setSelectedServiceType(service.name);
+              }}
               className={`w-full text-left p-6 rounded-2xl border-2 transition-all ${
                 effectiveSelectedServiceId === service.id
                   ? "border-blue-900 bg-blue-100"
@@ -91,7 +84,7 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">
+                  <h3 className="text-md font-semibold text-gray-900">
                     {service.name}
                   </h3>
                   <div className="flex items-center gap-2 text-gray-600 mt-2">
@@ -100,9 +93,6 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-400">
-                    {service.id}
-                  </div>
                   {selectedServiceId === service.id && (
                     <div className="text-green-600">✓</div>
                   )}
@@ -111,90 +101,13 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
             </button>
           ))}
         </div>
-
-        {/* Expanded Form for Selected Service */}
-        {selectedService && (
-          <div className="bg-white border-2 border-blue-900 rounded-3xl p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">
-              {selectedService.name}
-            </h3>
-
-            <div className="space-y-6 mb-8">
-              {/* Full Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-2">
-                  FULL NAME
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Jane Doe"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900"
-                />
-              </div>
-
-              {/* Mobile Number */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-2">
-                  MOBILE NUMBER
-                </label>
-                <input
-                  type="tel"
-                  value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900"
-                />
-              </div>
-
-              {/* Notifications */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-4">
-                  NOTIFICATIONS
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setNotification("sms")}
-                    className={`flex flex-col items-center p-4 rounded-xl border-2 text-center transition-all ${
-                      notification === "sms"
-                        ? "border-gray-300 bg-blue-900 text-white"
-                        : "border-gray-200 hover:border-gray-400"
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">
-                      <MdOutlineMessage />
-                    </div>
-                    <div className="font-semibold">SMS</div>
-                  </button>
-
-                  <button
-                    onClick={() => setNotification("browser")}
-                    className={`flex flex-col items-center p-4 rounded-xl border-2 text-center transition-all ${
-                      notification === "browser"
-                        ? "border-blue-900 bg-blue-900 text-white"
-                        : "border-gray-200 hover:border-gray-400"
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">
-                      <FiBell />
-                    </div>
-                    <div className="font-semibold">Browser</div>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Join Button */}
-            <button
-              onClick={handleSubmit}
-              disabled={!fullName || !mobileNumber}
-              className="w-full bg-blue-900 text-white font-semibold py-4 rounded-full hover:bg-blue-800 disabled:opacity-50 transition-colors text-lg"
-            >
-              Join Queue
-            </button>
-          </div>
-        )}
+        <button
+          onClick={handleSubmit}
+          disabled={!selectedService}
+          className="w-full bg-blue-900 text-white font-semibold py-4 rounded-full hover:bg-blue-800 disabled:opacity-50 transition-colors text-lg"
+        >
+          Join Queue
+        </button>
       </div>
     </div>
   );

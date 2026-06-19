@@ -37,7 +37,7 @@ export const QueueStatus: React.FC<QueueStatusProps> = ({
           <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
             Your Ticket
           </p>
-          <h2 className="text-8xl font-bold text-gray-900 font-mono">
+          <h2 className="text-2xl font-bold text-gray-900 font-mono">
             {ticketNumber}
           </h2>
         </div>
