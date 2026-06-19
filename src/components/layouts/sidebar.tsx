@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { getNavItemsForRole, normalizeRole } from "../../constants/navigation";
 import { useCurrentUser } from "../../hooks/use-auth";
+import logo from "../../assets/q-smart.png";
 
 const Sidebar = () => {
   const currentUserQuery = useCurrentUser();
@@ -12,7 +13,7 @@ const Sidebar = () => {
       {/* Logo */}
       <div className="flex flex-col items-center justify-center">
         <img
-          src="./src/assets/q-smart.png"
+          src={logo}
           alt="q-smart-logo"
           className=" object-cover w-25 h-25 mt-6 mb-4"
         />

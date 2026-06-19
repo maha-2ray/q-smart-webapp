@@ -17,12 +17,13 @@ type StaffTableProps = {
   data: StaffMember[];
   onEdit?: (staff: StaffMember) => void;
   onDelete?: (id: string) => void;
+  approvingStaffId?: string;
 };
 
 export const StaffTable: React.FC<StaffTableProps> = ({
   data,
   onEdit,
-  onDelete,
+  approvingStaffId,
 }) => {
   const columns: TableColumn<StaffMember>[] = [
     {
@@ -56,27 +57,34 @@ export const StaffTable: React.FC<StaffTableProps> = ({
     },
     {
       name: "ACTIONS",
-      cell: (row) => (
-        <div className="flex gap-2">
-          {onEdit && (
-            <button
-              onClick={() => onEdit(row)}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-            >
-              Edit
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={() => onDelete(row.id)}
-              className="text-red-600 hover:text-red-800 font-medium text-sm"
-            >
-              Delete
-            </button>
-          )}
-        </div>
-      ),
-      width: "120px",
+      cell: (row) => {
+        const isApproving = approvingStaffId === row.id;
+        const canApproveAdmin =
+          row.role === "ADMIN" && row.status === "Inactive";
+
+        return (
+          <div className="flex gap-2">
+            {onEdit && canApproveAdmin && (
+              <button
+                onClick={() => onEdit(row)}
+                disabled={!canApproveAdmin || isApproving}
+                className="text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed font-medium text-sm"
+              >
+                {isApproving ? "Approving..." : "Approve"}
+              </button>
+            )}
+            {/* {onDelete && (
+              <button
+                onClick={() => onDelete(row.id)}
+                className="text-red-600 hover:text-red-800 font-medium text-sm"
+              >
+                Delete
+              </button>
+            )} */}
+          </div>
+        );
+      },
+      width: "140px",
     },
   ];
 

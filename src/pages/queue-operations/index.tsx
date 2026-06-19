@@ -42,8 +42,12 @@ const mapTicketStatus = (status: string): QueueEntry["status"] => {
   return "Waiting";
 };
 
+const activeServingStatuses = new Set(["CALLED", "SERVING"]);
+
 const QueueOperations: React.FC = () => {
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
   const departmentsQuery = useDepartments();
   const unitsQuery = useUnits();
   const ticketsQuery = useTickets({ pageNumber: 0, pageSize: 50 });
@@ -52,21 +56,91 @@ const QueueOperations: React.FC = () => {
   const completeTicket = useCompleteTicket();
   const updateTicket = useUpdateTicket();
 
+  const units = unitsQuery.data || [];
+  const departments = departmentsQuery.data || [];
   const tickets = ticketsQuery.data?.tickets || [];
-  const selectedUnit = unitsQuery.data?.[0];
-  const selectedDepartment = departmentsQuery.data?.find(
-    (department) => department.id === selectedUnit?.departmentId,
+
+  const effectiveSelectedDepartmentId =
+    selectedDepartmentId || departments[0]?.id || "";
+
+  // const effectiveSelectedUnitId =
+  //   selectedUnitId ||
+  //   units.find((unit) => unit.departmentId === effectiveSelectedDepartmentId)?.id ||
+  //   "";
+
+  const filteredUnits = useMemo(
+    () =>
+      units.filter(
+        (unit) => unit.departmentId === effectiveSelectedDepartmentId,
+      ),
+    [effectiveSelectedDepartmentId, units],
   );
+
+  const effectiveSelectedUnitId = filteredUnits.some(
+    (unit) => unit.id === selectedUnitId,
+  )
+    ? selectedUnitId
+    : filteredUnits[0]?.id || "";
+
+  // useEffect(() => {
+  //   if (!selectedDepartmentId) {
+  //     if (selectedUnitId) setSelectedUnitId("");
+  //     return;
+  //   }
+
+  //   const selectedUnitBelongsToDepartment = filteredUnits.some(
+  //     (unit) => unit.id === selectedUnitId,
+  //   );
+
+  //   if (!selectedUnitBelongsToDepartment) {
+  //     setSelectedUnitId(filteredUnits[0]?.id || "");
+  //   }
+  // }, [filteredUnits, selectedDepartmentId, selectedUnitId]);
+
+  const selectedDepartment = departments.find(
+    (department) => department.id === effectiveSelectedDepartmentId,
+  );
+
+  const selectedUnitTickets = tickets.filter(
+    (ticket) => ticket.unitId === effectiveSelectedUnitId,
+  );
+
   const waitingTickets = tickets.filter(
-    (ticket) => ticket.status === "WAITING",
+    (ticket) =>
+      ticket.unitId === effectiveSelectedUnitId && ticket.status === "WAITING",
   );
+
+  const calledTicket = callNext.data;
   const currentlyServing =
-    tickets.find((ticket) => ticket.status === "CALLED") ||
-    tickets.find((ticket) => ticket.status === "SERVING");
+    calledTicket &&
+    calledTicket.unitId === effectiveSelectedUnitId &&
+    activeServingStatuses.has(String(calledTicket.status).toUpperCase())
+      ? calledTicket
+      : selectedUnitTickets.find((ticket) =>
+          activeServingStatuses.has(String(ticket.status).toUpperCase()),
+        );
+
+  const unitOptions = useMemo(
+    () =>
+      filteredUnits.map((unit) => ({
+        id: unit.id,
+        name: unit.name,
+      })),
+    [filteredUnits],
+  );
+
+  const queueDepartmentOptions = useMemo(
+    () =>
+      departments.map((department) => ({
+        id: department.id,
+        name: department.name,
+      })),
+    [departments],
+  );
 
   const departmentOptions: DepartmentOption[] = useMemo(
     () =>
-      (unitsQuery.data || []).map((unit, index) => {
+      units.map((unit, index) => {
         const department = departmentsQuery.data?.find(
           (item) => item.id === unit.departmentId,
         );
@@ -82,16 +156,18 @@ const QueueOperations: React.FC = () => {
           ).length,
         };
       }),
-    [departmentsQuery.data, tickets, unitsQuery.data],
+    [departmentsQuery.data, tickets, units],
   );
 
-  const tableData: QueueEntry[] = tickets.map((ticket: QueueTicket) => ({
-    ticket: ticket.ticketNumber,
-    customerName: ticket.customerName,
-    waitTime: getWaitMinutes(ticket.issuedAt || ticket.createdAt),
-    joinedAt: formatTime(ticket.issuedAt || ticket.createdAt),
-    status: mapTicketStatus(ticket.status),
-  }));
+  const tableData: QueueEntry[] = selectedUnitTickets.map(
+    (ticket: QueueTicket) => ({
+      ticket: ticket.ticketNumber,
+      customerName: ticket.customerName,
+      waitTime: getWaitMinutes(ticket.issuedAt || ticket.createdAt),
+      joinedAt: formatTime(ticket.issuedAt || ticket.createdAt),
+      status: mapTicketStatus(ticket.status),
+    }),
+  );
 
   return (
     <>
@@ -102,11 +178,23 @@ const QueueOperations: React.FC = () => {
         <div className="grid grid-cols-[1fr_3fr] gap-6">
           <div className="grid grid-rows-[2fr_3fr] gap-6">
             <QueueControl
-              departmentName={selectedDepartment?.name || "All"}
+              departmentName={selectedDepartment?.name || "Select department"}
               numberWaiting={waitingTickets.length}
               avgWaitTime={0}
+              departments={queueDepartmentOptions}
+              units={unitOptions}
+              selectedDepartmentId={effectiveSelectedDepartmentId}
+              selectedUnitId={effectiveSelectedUnitId}
+              isCallingNext={callNext.isPending}
+              callNextDisabled={!effectiveSelectedUnitId}
+              onDepartmentChange={(departmentId) => {
+                setSelectedDepartmentId(departmentId);
+                setSelectedUnitId("");
+              }}
+              onUnitChange={setSelectedUnitId}
               onCallNext={() =>
-                selectedUnit && callNext.mutate(selectedUnit.id)
+                effectiveSelectedUnitId &&
+                callNext.mutate(effectiveSelectedUnitId)
               }
             />
             <CurrentlyServing
@@ -116,14 +204,22 @@ const QueueOperations: React.FC = () => {
               }
               holderPhoneNumber={currentlyServing?.customerPhone || "-"}
               onServed={() =>
-                currentlyServing && completeTicket.mutate(currentlyServing.id)
+                currentlyServing &&
+                completeTicket.mutate(currentlyServing.id, {
+                  onSuccess: () => callNext.reset(),
+                })
               }
               onNoShow={() =>
                 currentlyServing &&
-                updateTicket.mutate({
-                  id: currentlyServing.id,
-                  payload: { status: "NO_SHOW" },
-                })
+                updateTicket.mutate(
+                  {
+                    id: currentlyServing.id,
+                    payload: { status: "NO_SHOW" },
+                  },
+                  {
+                    onSuccess: () => callNext.reset(),
+                  },
+                )
               }
               onRecall={() =>
                 currentlyServing &&

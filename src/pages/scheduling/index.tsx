@@ -54,26 +54,6 @@ const dayOptions: DayOfWeek[] = [
   "SUNDAY",
 ];
 
-// const formatTime = (time: ApiSchedule["openingTime"]) => {
-//   if (typeof time === "string") return time;
-
-//   return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(
-//     2,
-//     "0",
-//   )}`;
-// };
-
-// const toLocalTimePayload = (time: string) => {
-//   const [hour = "0", minute = "0"] = time.split(":");
-
-//   return {
-//     hour: Number(hour),
-//     minute: Number(minute),
-//     second: 0,
-//     nano: 0,
-//   };
-// };
-
 const Scheduling: React.FC = () => {
   const [formData, setFormData] = useState<ScheduleFormData>(emptyForm);
   const departmentsQuery = useDepartments();

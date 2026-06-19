@@ -26,7 +26,7 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
   onSelectService,
 }) => {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
-    services[1]?.id || null,
+    services[0]?.id ?? null,
   );
   const [fullName, setFullName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
@@ -34,12 +34,23 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
     "browser",
   );
 
-  const selectedService = services.find((s) => s.id === selectedServiceId);
+  const effectiveSelectedServiceId =
+    selectedServiceId ?? services[0]?.id ?? null;
+
+  const selectedService = services.find(
+    (s) => s.id === effectiveSelectedServiceId,
+  );
+
+  // useEffect(() => {
+  //   if (!selectedServiceId && services.length > 0) {
+  //     setSelectedServiceId(services[0].id);
+  //   }
+  // }, [selectedServiceId, services]);
 
   const handleSubmit = () => {
-    if (selectedServiceId && fullName && mobileNumber) {
+    if (effectiveSelectedServiceId && fullName && mobileNumber) {
       onSelectService({
-        serviceId: selectedServiceId,
+        serviceId: effectiveSelectedServiceId,
         name: fullName,
         mobileNumber,
         notification,
@@ -73,7 +84,7 @@ export const ServiceSelect: React.FC<ServiceSelectProps> = ({
               key={service.id}
               onClick={() => setSelectedServiceId(service.id)}
               className={`w-full text-left p-6 rounded-2xl border-2 transition-all ${
-                selectedServiceId === service.id
+                effectiveSelectedServiceId === service.id
                   ? "border-blue-900 bg-blue-100"
                   : "border-gray-200 hover:border-gray-400"
               }`}

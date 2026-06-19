@@ -20,6 +20,13 @@ export const queueService = {
     return response.data;
   },
 
+  getMyTickets: async () => {
+    const response = await apiClient.get<QueueTicket[]>(
+      `${TICKETS_BASE_PATH}/my-tickets`,
+    );
+    return response.data;
+  },
+
   getTicketsByUnit: async (unitId: EntityId) => {
     const response = await apiClient.get<QueueTicket[]>(
       `${TICKETS_BASE_PATH}/unit/${unitId}`,

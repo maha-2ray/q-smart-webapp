@@ -58,6 +58,20 @@ export const routes: RouteConfig[] = [
     protected: true,
   },
   {
+    path: "/customer/current-tickets",
+    component: Customer as React.LazyExoticComponent<
+      React.ComponentType<unknown>
+    >,
+    protected: true,
+  },
+  {
+    path: "/customer/previous-tickets",
+    component: Customer as React.LazyExoticComponent<
+      React.ComponentType<unknown>
+    >,
+    protected: true,
+  },
+  {
     path: "/departments",
     component: Departments as React.LazyExoticComponent<
       React.ComponentType<unknown>

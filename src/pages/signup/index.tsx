@@ -12,6 +12,10 @@ import {
 import { getApiErrorMessage } from "../../libs/api/api-client";
 import { useRegister } from "../../hooks/use-auth";
 import type { AuthRole } from "../../services/auth";
+import {
+  getDefaultPathForRole,
+  normalizeRole,
+} from "../../constants/navigation";
 
 const defaultRole: AuthRole = "USER";
 
@@ -70,7 +74,7 @@ const Signup: React.FC = () => {
         confirmPassword: form.confirmPassword,
         role: form.role,
       });
-      navigate("/dashboard");
+      navigate(getDefaultPathForRole(normalizeRole(form.role)));
     } catch (err) {
       console.error("Sign up error:", err);
       setError(getApiErrorMessage(err));
