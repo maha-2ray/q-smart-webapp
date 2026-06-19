@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { FiCalendar, FiPlus } from "react-icons/fi";
+import { FiCalendar } from "react-icons/fi";
 import { PageLayout } from "../../components/layouts/page-layout";
 import { Button } from "../../components/ui/button";
 import { useDepartments, useUnits } from "../../hooks/use-departments";
@@ -54,25 +54,25 @@ const dayOptions: DayOfWeek[] = [
   "SUNDAY",
 ];
 
-const formatTime = (time: ApiSchedule["openingTime"]) => {
-  if (typeof time === "string") return time;
+// const formatTime = (time: ApiSchedule["openingTime"]) => {
+//   if (typeof time === "string") return time;
 
-  return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(
-    2,
-    "0",
-  )}`;
-};
+//   return `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(
+//     2,
+//     "0",
+//   )}`;
+// };
 
-const toLocalTimePayload = (time: string) => {
-  const [hour = "0", minute = "0"] = time.split(":");
+// const toLocalTimePayload = (time: string) => {
+//   const [hour = "0", minute = "0"] = time.split(":");
 
-  return {
-    hour: Number(hour),
-    minute: Number(minute),
-    second: 0,
-    nano: 0,
-  };
-};
+//   return {
+//     hour: Number(hour),
+//     minute: Number(minute),
+//     second: 0,
+//     nano: 0,
+//   };
+// };
 
 const Scheduling: React.FC = () => {
   const [formData, setFormData] = useState<ScheduleFormData>(emptyForm);
@@ -99,8 +99,8 @@ const Scheduling: React.FC = () => {
       unit: unit?.name || schedule.unitId,
       staff: "",
       date: schedule.dayOfWeek,
-      startTime: formatTime(schedule.openingTime),
-      endTime: formatTime(schedule.closingTime),
+      startTime: schedule.openingTime,
+      endTime: schedule.closingTime,
       status: schedule.isActive === false ? "paused" : "active",
       notes: schedule.maxCapacity
         ? `Max capacity: ${schedule.maxCapacity}`
@@ -142,8 +142,8 @@ const Scheduling: React.FC = () => {
       {
         unitId: formData.unitId,
         dayOfWeek: formData.dayOfWeek,
-        openingTime: toLocalTimePayload(formData.openingTime),
-        closingTime: toLocalTimePayload(formData.closingTime),
+        openingTime: formData.openingTime,
+        closingTime: formData.closingTime,
         maxCapacity: formData.maxCapacity
           ? Number(formData.maxCapacity)
           : undefined,
@@ -177,17 +177,6 @@ const Scheduling: React.FC = () => {
     <PageLayout
       title="Scheduling"
       subtitle="Create and manage staff coverage schedules across departments and units."
-      actions={
-        <Button
-          title="New Schedule"
-          variant="primary"
-          size="md"
-          iconLeft={<FiPlus />}
-          onClick={() => {
-            document.getElementById("schedule-unit")?.focus();
-          }}
-        />
-      }
     >
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

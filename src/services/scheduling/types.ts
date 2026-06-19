@@ -7,19 +7,12 @@ export type DayOfWeek =
   | "SATURDAY"
   | "SUNDAY";
 
-export interface LocalTimePayload {
-  hour: number;
-  minute: number;
-  second: number;
-  nano: number;
-}
-
 export interface Schedule {
   id: string;
   unitId: string;
   dayOfWeek: DayOfWeek;
-  openingTime: string | LocalTimePayload;
-  closingTime: string | LocalTimePayload;
+  openingTime: string;
+  closingTime: string;
   maxCapacity?: number;
   isActive?: boolean;
   createdAt?: string;
@@ -29,14 +22,14 @@ export interface Schedule {
 export interface ScheduleRequest {
   unitId: string;
   dayOfWeek: DayOfWeek;
-  openingTime: LocalTimePayload;
-  closingTime: LocalTimePayload;
+  openingTime: string;
+  closingTime: string;
   maxCapacity?: number;
 }
 
 export interface UpdateScheduleRequest {
-  openingTime?: LocalTimePayload;
-  closingTime?: LocalTimePayload;
+  openingTime?: string;
+  closingTime?: string;
   maxCapacity?: number;
   isActive?: boolean;
 }
