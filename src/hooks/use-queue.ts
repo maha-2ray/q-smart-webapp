@@ -15,7 +15,8 @@ export const queueQueryKeys = {
   lists: () => [...queueQueryKeys.all, "list"] as const,
   list: (params?: TicketListParams) =>
     [...queueQueryKeys.lists(), params] as const,
-  myTickets: () => [...queueQueryKeys.all, "my-tickets"] as const,
+  myTickets: (ownerKey?: string | null) =>
+    [...queueQueryKeys.all, "my-tickets", ownerKey ?? "anonymous"] as const,
   unit: (unitId: EntityId) => [...queueQueryKeys.all, "unit", unitId] as const,
   unitStatus: (unitId: EntityId, status: QueueTicketStatus) =>
     [...queueQueryKeys.unit(unitId), "status", status] as const,
@@ -34,11 +35,11 @@ export const useTickets = (params?: TicketListParams) =>
     queryFn: () => queueService.getTickets(params),
   });
 
-export const useMyTickets = (enabled = true) =>
+export const useMyTickets = (ownerKey?: string | null, enabled = true) =>
   useQuery({
-    queryKey: queueQueryKeys.myTickets(),
+    queryKey: queueQueryKeys.myTickets(ownerKey),
     queryFn: queueService.getMyTickets,
-    enabled,
+    enabled: enabled && !!ownerKey,
   });
 
 export const useTicketsByUnit = (unitId: EntityId, enabled = true) =>

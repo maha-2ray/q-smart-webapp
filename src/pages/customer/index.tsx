@@ -44,6 +44,16 @@ const previousTicketStatuses = new Set([
   "NO_SHOW",
 ]);
 
+const normalizeEmail = (email?: string) => email?.trim().toLowerCase();
+
+const ticketBelongsToUser = (ticket: QueueTicket, userEmail?: string) => {
+  const normalizedUserEmail = normalizeEmail(userEmail);
+
+  if (!normalizedUserEmail) return false;
+
+  return normalizeEmail(ticket.customerEmail) === normalizedUserEmail;
+};
+
 const formatTicketDate = (ticket: QueueTicket) => {
   const dateValue = ticket.issuedAt || ticket.createdAt || ticket.updatedAt;
 
@@ -158,16 +168,20 @@ const Customer: React.FC = () => {
   });
   const [ticket, setTicket] = useState<QueueTicket | null>(null);
   const currentUserQuery = useCurrentUser();
+  const currentUser = currentUserQuery.data;
+  const currentUserOwnerKey = currentUser?.id || currentUser?.email;
   const unitsQuery = useUnits();
   const isCurrentTicketsView = location.pathname.endsWith("/current-tickets");
   const isPreviousTicketsView = location.pathname.endsWith("/previous-tickets");
   const myTicketsQuery = useMyTickets(
+    currentUserOwnerKey,
     isCurrentTicketsView || isPreviousTicketsView,
   );
   const createTicket = useCreateTicket();
   const cancelTicket = useCancelTicket();
 
-  const isLoadingTickets = myTicketsQuery.isLoading;
+  const isLoadingTickets =
+    currentUserQuery.isLoading || myTicketsQuery.isLoading;
 
   const services: Service[] = (unitsQuery.data || []).map((unit) => ({
     id: unit.id,
@@ -175,7 +189,13 @@ const Customer: React.FC = () => {
     waitTime: "-",
   }));
 
-  const tickets = myTicketsQuery.data || [];
+  const tickets = useMemo(
+    () =>
+      (myTicketsQuery.data || []).filter((queueTicket) =>
+        ticketBelongsToUser(queueTicket, currentUser?.email),
+      ),
+    [currentUser?.email, myTicketsQuery.data],
+  );
   const currentTickets = useMemo(
     () =>
       tickets.filter((queueTicket) =>
@@ -227,7 +247,7 @@ const Customer: React.FC = () => {
         unitId: customerData.serviceId,
         customerName: data.name,
         customerPhone: data.phone,
-        customerEmail: currentUserQuery.data?.email,
+        customerEmail: currentUser?.email,
         serviceType: customerData.serviceType,
       },
       {
@@ -258,7 +278,7 @@ const Customer: React.FC = () => {
         emptyMessage="You do not have any active tickets right now."
         tickets={currentTickets}
         isLoading={isLoadingTickets}
-        isError={myTicketsQuery.isError}
+        isError={currentUserQuery.isError || myTicketsQuery.isError}
       />
     );
   }
@@ -270,7 +290,7 @@ const Customer: React.FC = () => {
         emptyMessage="You do not have any previous tickets yet."
         tickets={previousTickets}
         isLoading={isLoadingTickets}
-        isError={myTicketsQuery.isError}
+        isError={currentUserQuery.isError || myTicketsQuery.isError}
       />
     );
   }

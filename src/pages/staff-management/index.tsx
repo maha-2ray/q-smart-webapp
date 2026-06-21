@@ -1,16 +1,23 @@
 import { PageLayout } from "../../components/layouts/page-layout";
 import React, { useState, useMemo } from "react";
-import { StaffHeader, StaffTable } from "./components";
+import { AddStaffModal, StaffHeader, StaffTable } from "./components";
 import type { StaffMember } from "./components";
 import {
   useApproveStaffMember,
+  useCreateStaffMember,
   useDeleteStaffMember,
   useStaff,
 } from "../../hooks/use-staff";
+import type { StaffRequest } from "../../services/staff";
+import { getApiErrorMessage } from "../../libs/api/api-client";
+import { toast } from "react-toastify";
 
 const StaffManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [createStaffError, setCreateStaffError] = useState("");
   const staffQuery = useStaff();
+  const createStaffMember = useCreateStaffMember();
   const approveStaffMember = useApproveStaffMember();
   const deleteStaffMember = useDeleteStaffMember();
 
@@ -46,8 +53,27 @@ const StaffManagement: React.FC = () => {
   };
 
   const handleAddStaff = () => {
-    // TODO: Implement add staff modal
-    console.log("Add staff clicked");
+    setCreateStaffError("");
+    setIsAddStaffOpen(true);
+  };
+
+  const handleCloseAddStaff = () => {
+    if (createStaffMember.isPending) return;
+
+    setCreateStaffError("");
+    setIsAddStaffOpen(false);
+  };
+
+  const handleCreateStaff = async (data: StaffRequest) => {
+    setCreateStaffError("");
+
+    try {
+      await createStaffMember.mutateAsync(data);
+      toast.success("Staff member created successfully.");
+      setIsAddStaffOpen(false);
+    } catch (error) {
+      setCreateStaffError(getApiErrorMessage(error));
+    }
   };
 
   const handleEdit = (staff: StaffMember) => {
@@ -59,28 +85,40 @@ const StaffManagement: React.FC = () => {
   };
 
   return (
-    <PageLayout
-      title="User Management"
-      subtitle="Manage team members, roles, and department assignments."
-    >
-      <StaffHeader onSearch={handleSearch} onAddStaff={handleAddStaff} />
-      {staffQuery.isLoading && (
-        <p className="text-sm text-gray-500">Loading staff...</p>
+    <>
+      <PageLayout
+        title="User Management"
+        subtitle="Manage team members, roles, and department assignments."
+      >
+        <StaffHeader onSearch={handleSearch} onAddStaff={handleAddStaff} />
+        {staffQuery.isLoading && (
+          <p className="text-sm text-gray-500">Loading staff...</p>
+        )}
+        {staffQuery.isError && (
+          <p className="text-sm text-red-600">Unable to load users.</p>
+        )}
+        <StaffTable
+          data={filteredStaff}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          approvingStaffId={
+            approveStaffMember.isPending
+              ? String(approveStaffMember.variables)
+              : undefined
+          }
+        />
+      </PageLayout>
+
+      {isAddStaffOpen && (
+        <AddStaffModal
+          isOpen={isAddStaffOpen}
+          isSubmitting={createStaffMember.isPending}
+          errorMessage={createStaffError}
+          onClose={handleCloseAddStaff}
+          onSubmit={handleCreateStaff}
+        />
       )}
-      {staffQuery.isError && (
-        <p className="text-sm text-red-600">Unable to load users.</p>
-      )}
-      <StaffTable
-        data={filteredStaff}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        approvingStaffId={
-          approveStaffMember.isPending
-            ? String(approveStaffMember.variables)
-            : undefined
-        }
-      />
-    </PageLayout>
+    </>
   );
 };
 
